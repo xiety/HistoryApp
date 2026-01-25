@@ -1,0 +1,85 @@
+<div class="minimap-wrapper">
+
+  <div class="control-bar">
+    <div class="bound-label min-label">{{ mapBounds().min }}</div>
+
+    <div class="center-controls">
+
+      <button class="nav-button" (click)="jumpTo('start')" [disabled]="!canGoBack()" title="Jump to start">
+        <app-icon name="chevrons-left" [size]="12" />
+      </button>
+
+      <button class="nav-button" (click)="shiftRange(-1, $event)" [disabled]="!canGoBack()"
+        title="Shift Left (Shift+Click for 10x)">
+        <app-icon name="chevron-left" [size]="12" />
+      </button>
+
+      <div class="input-group">
+        <input type="number" [min]="mapBounds().min" [max]="mapBounds().max" [ngModel]="roundedStart()"
+          (ngModelChange)="updateStart($event)" class="range-input start-input" aria-label="Start Year" />
+        <span class="range-separator">-</span>
+        <input type="number" [min]="mapBounds().min" [max]="mapBounds().max" [ngModel]="roundedEnd()"
+          (ngModelChange)="updateEnd($event)" class="range-input end-input" aria-label="End Year" />
+      </div>
+
+      <button class="nav-button" (click)="shiftRange(1, $event)" [disabled]="!canGoForward()"
+        title="Shift Right (Shift+Click for 10x)">
+        <app-icon name="chevron-right" [size]="12" />
+      </button>
+
+      <button class="nav-button" (click)="jumpTo('end')" [disabled]="!canGoForward()" title="Jump to end">
+        <app-icon name="chevrons-right" [size]="12" />
+      </button>
+
+      <button class="fit-button" (click)="state.fitData()" title="Fit to Content">
+        Fit
+      </button>
+    </div>
+
+    <div class="bound-label max-label">{{ mapBounds().max }}</div>
+  </div>
+
+  <div class="track-container" #mapContainer (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)" (pointerleave)="onPointerLeave()">
+
+    <div class="map-content-layer">
+      <svg class="density-chart" preserveAspectRatio="none" width="100%" height="100%"
+        (pointerdown)="onPointerDown($event, 'create')" (lostpointercapture)="onPointerUp($event)">
+
+        @for (bar of densityBars(); track bar.x) {
+
+        @if (bar.hasDimmed) {
+        <rect class="bar-dimmed" [class.is-search-active]="bar.isSearchActive" [attr.x]="bar.x + '%'"
+          [attr.y]="bar.dimmedY + '%'" [attr.width]="bar.width + '%'" [attr.height]="bar.dimmedHeight + '%'" />
+        }
+
+        @if (bar.hasMatch) {
+        <rect class="bar-match" [attr.x]="bar.x + '%'" [attr.y]="bar.matchY + '%'" [attr.width]="bar.width + '%'"
+          [attr.height]="bar.matchHeight + '%'" />
+        }
+        }
+      </svg>
+
+      @let range = rangePercent();
+      <div class="viewport-brush" [style.left.%]="range.left" [style.width.%]="range.width"
+        [class.is-dragging]="isDragging()">
+        <div class="resize-handle handle-left" (pointerdown)="onPointerDown($event, 'start')"
+          (lostpointercapture)="onPointerUp($event)"></div>
+
+        <div class="brush-body" (pointerdown)="onPointerDown($event, 'pan')" (lostpointercapture)="onPointerUp($event)">
+        </div>
+
+        <div class="resize-handle handle-right" (pointerdown)="onPointerDown($event, 'end')"
+          (lostpointercapture)="onPointerUp($event)"></div>
+      </div>
+
+      @let hPct = hoverXPercent();
+      @if (hPct !== null) {
+      <div class="hover-tip" [style.left.%]="hPct">
+        {{ formattedHoverYear() }}
+      </div>
+      }
+    </div>
+
+  </div>
+</div>

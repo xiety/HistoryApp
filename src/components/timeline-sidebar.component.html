@@ -1,0 +1,22 @@
+@if (state.isSidebarOpen()) {
+<div class="sidebar-backdrop" (click)="state.closeSidebar()"></div>
+}
+
+<aside class="sidebar-container" [class.is-open]="state.isSidebarOpen()">
+  <div class="sidebar-tabs">
+    <button class="tab-button" [class.active]="activeTab() === 'editor'" (click)="activeTab.set('editor')">
+      Data Editor
+    </button>
+    <button class="tab-button" [class.active]="activeTab() === 'toc'" (click)="activeTab.set('toc')">
+      Table of Contents
+    </button>
+  </div>
+
+  <div class="sidebar-content">
+    @if (activeTab() === 'editor') {
+    <app-timeline-editor></app-timeline-editor>
+    } @else {
+    <app-timeline-toc (scrollToCategory)="onScrollToCategory($event)"></app-timeline-toc>
+    }
+  </div>
+</aside>

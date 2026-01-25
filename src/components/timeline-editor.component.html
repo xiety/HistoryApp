@@ -1,0 +1,14 @@
+<div class="editor-sidebar">
+  <div class="editor-toolbar">
+    <div class="toolbar-btn-wrapper"
+      [title]="state.inputText().trim().length > 0 ? 'Clear editor to load default data' : 'Reset to Default Data'">
+      <button class="toolbar-button" (click)="state.loadFromUrl()"
+        [disabled]="state.isLoading() || state.inputText().trim().length > 0">
+        <app-icon name="download" [size]="14" class="mr-1" />
+        <span>Load Default</span>
+      </button>
+    </div>
+  </div>
+  <textarea class="data-input-area" [ngModel]="state.inputText()" (ngModelChange)="state.setText($event)"
+    placeholder="Enter events..." spellcheck="false"></textarea>
+</div>

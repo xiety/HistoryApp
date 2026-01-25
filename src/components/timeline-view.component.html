@@ -1,0 +1,115 @@
+<div class="timeline-layout-area" [style.width.px]="state.layoutWidth()" [style.font-size.px]="config.baseFontSize()"
+  (click)="clearSelection()">
+
+  <div class="grid-lines-layer">
+    @for (line of state.gridLines(); track line.label) {
+    <div class="grid-line-vertical" [style.left.px]="line.x"></div>
+    }
+  </div>
+
+  @for (category of state.processedLayout(); track category.id) {
+  <section class="category-group" [style.--category-color]="category.color">
+
+    <div class="category-header" [style.height.px]="config.categoryHeaderHeight()">
+      <h2 class="category-badge">
+        {{ category.name }}
+      </h2>
+    </div>
+
+    <div class="pl-0">
+      @for (sub of category.subcategories; track sub.id) {
+      <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
+        [style.padding-bottom.px]="config.subcategoryMarginBottom()">
+
+        @if (sub.name) {
+        <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
+        }
+
+        <div class="events-track" [style.height.px]="sub.height">
+
+          @if (sub.legendRows.length > 0) {
+          <div class="legend-background" [style.top.px]="sub.legendStartY - config.legendBlockPadding()"
+            [style.bottom.px]="0"></div>
+          }
+
+          @for (row of sub.rows; track $index) {
+          @for (event of row; track event.raw.id) {
+          @let evtId = 'evt-' + event.raw.id;
+          @let isHovered = hoveredId() === event.raw.id;
+
+          <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
+            [style.top.px]="event.row * config.rowTotalHeight()" [style.height.px]="config.rowHeight()"
+            [class.selected]="selectedId() === evtId" [class.linked]="isHovered"
+            [class.is-dimmed]="isDimmed(event.raw.id)" (click)="toggleSelection(evtId, $event)"
+            (mouseenter)="setHovered(event.raw.id)" (mouseleave)="clearHovered()">
+            <div class="event-bg" [class.is-single-year]="event.raw.start === event.raw.end"
+              [class.no-border-left]="event.clippedLeft"
+              [class.no-border-right]="event.clippedRight || event.displayMode === 'overflow' || event.displayMode === 'legend-overflow'">
+            </div>
+
+            <div class="event-label label-base"
+              [class.event-label--overflow]="event.displayMode === 'overflow' || event.displayMode === 'legend-overflow'">
+              @if (event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow') {
+              <span class="block">{{ event.legendId }}</span>
+              } @else {
+              <span class="block">{{ event.raw.name }}</span>
+              }
+            </div>
+
+            <div class="event-label label-mask" aria-hidden="true">
+              @if (event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow') {
+              <span class="block">{{ event.legendId }}</span>
+              } @else {
+              <span class="block">{{ event.raw.name }}</span>
+              }
+            </div>
+
+            @if (isHovered || selectedId() === evtId) {
+            <div class="date-tag start-tag" [class.out-of-bounds]="event.clippedLeft">
+              {{ event.raw.start }}
+            </div>
+
+            @if (event.raw.end !== event.raw.start) {
+            <div class="date-tag end-tag" [class.out-of-bounds]="event.clippedRight">
+              {{ event.raw.end }}
+            </div>
+            }
+            }
+          </div>
+          }
+          }
+
+          @for (row of sub.legendRows; track $index) {
+          @for (item of row; track item.legendId) {
+          @let legId = 'leg-' + item.raw.id;
+          @let isHovered = hoveredId() === item.raw.id;
+
+          <div class="legend-item" [style.left.px]="item.x"
+            [style.top.px]="sub.legendStartY + (item.row * config.legendRowHeight())"
+            [style.height.px]="config.legendRowHeight()" [class.selected]="selectedId() === legId"
+            [class.linked]="isHovered" [class.is-dimmed]="isDimmed(item.raw.id)"
+            (click)="toggleSelection(legId, $event)" (mouseenter)="setHovered(item.raw.id)"
+            (mouseleave)="clearHovered()">
+            {{ item.text }}
+          </div>
+          }
+          }
+        </div>
+
+      </div>
+      }
+    </div>
+  </section>
+  }
+
+  @if (state.processedLayout().length === 0) {
+  <div class="empty-message">
+    <p>No events found in this range.</p>
+  </div>
+  }
+
+  <div class="border-lines-layer">
+    <div class="grid-line-solid" style="left: 0px;"></div>
+    <div class="grid-line-solid" [style.left.px]="state.layoutWidth() - 1"></div>
+  </div>
+</div>

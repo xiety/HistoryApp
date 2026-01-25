@@ -1,0 +1,265 @@
+:host {
+  display: block;
+}
+
+.top-bar {
+  flex: none;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: white;
+  padding: 8px 12px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  z-index: 30;
+  position: relative;
+}
+
+.top-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.branding-area {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px;
+  border-radius: 4px;
+  align-self: center;
+}
+
+.menu-button:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+@media (min-width: 768px) {
+  .menu-button {
+    display: none;
+  }
+}
+
+.app-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+@media (max-width: 400px) {
+  .app-title {
+    display: none;
+  }
+}
+
+.repo-link {
+  color: #94a3b8;
+  padding: 4px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.repo-link:hover {
+  text-decoration: underline;
+}
+
+.search-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 500px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 60px 6px 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #334155;
+  outline: none;
+  background-color: #f8fafc;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  background-color: white;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+.search-actions {
+  position: absolute;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.search-count-badge {
+  background-color: #e2e8f0;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  min-width: 18px;
+  text-align: center;
+  user-select: none;
+}
+
+.clear-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 99px;
+  transition: all 0.15s;
+}
+
+.clear-button:hover {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-toggle:hover {
+  color: #334155;
+}
+
+.filter-toggle.is-active {
+  color: #4f46e5;
+}
+
+.filter-toggle input {
+  cursor: pointer;
+}
+
+.controls-area {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 800px) {
+  .hidden-xs {
+    display: none;
+  }
+}
+
+.input-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.year-input {
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  background-color: white;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  color: #1e293b;
+  outline: none;
+  text-align: center;
+  appearance: none;
+}
+
+.year-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  border-radius: 0.25rem;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button.icon-only {
+  padding: 6px;
+}
+
+.action-button.primary {
+  background-color: #4f46e5;
+  color: white;
+}
+
+.action-button.primary:hover {
+  background-color: #4338ca;
+}
+
+.action-button.secondary {
+  background-color: white;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.action-button.secondary:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}

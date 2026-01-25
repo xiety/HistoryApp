@@ -1,0 +1,71 @@
+:host {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.timeline-view-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  overflow: hidden;
+  touch-action: none;
+  cursor: default;
+}
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.scroll-area::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+.scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.content-wrapper {
+  min-height: 100%;
+  position: relative;
+}
+
+.cursor-guide-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background-color: rgba(239, 68, 68, 0.4);
+  pointer-events: none;
+  z-index: 120;
+  will-change: transform;
+}
+
+.persistent-guide-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background-color: #3b82f6;
+  pointer-events: none;
+  z-index: 121;
+  will-change: transform;
+}

@@ -1,28 +1,43 @@
-# Angular specific
-/dist/
-/out-tsc/
-/tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
-.angular/
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
 
-# Environment files
-/.env
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
 
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
-# TypeScript cache
-*.tsbuildinfo
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Miscellaneous
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+__screenshots__/
+
+# System files
+.DS_Store
+Thumbs.db

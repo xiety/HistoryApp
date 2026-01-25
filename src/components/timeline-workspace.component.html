@@ -1,0 +1,20 @@
+<main class="timeline-view-wrapper" appTimelineInteractions [scrollContainer]="scrollContainer">
+
+  <app-timeline-ruler></app-timeline-ruler>
+
+  <div class="scroll-area custom-scrollbar" #scrollContainer (scroll)="onScroll()">
+    <div class="content-wrapper">
+      <app-timeline-view></app-timeline-view>
+    </div>
+  </div>
+
+  @let pGuideX = persistentGuideX();
+  @if (pGuideX !== null) {
+  <div class="persistent-guide-line" [style.transform]="'translateX(' + pGuideX + 'px)'"></div>
+  }
+
+  @let guideX = cursorGuideX();
+  @if (guideX !== null) {
+  <div class="cursor-guide-line" [style.transform]="'translateX(' + guideX + 'px)'"></div>
+  }
+</main>
