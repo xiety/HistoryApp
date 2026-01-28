@@ -54,7 +54,6 @@
   padding-bottom: 0;
   display: flex;
   align-items: flex-end;
-  margin-bottom: 2px;
   background-color: transparent;
 }
 
@@ -93,6 +92,9 @@
   width: fit-content;
   padding-right: 8px;
   border-radius: 0 4px 4px 0;
+
+  position: relative;
+  z-index: 20;
 }
 
 .events-track {
@@ -158,6 +160,12 @@
   align-items: center;
   height: 100%;
   pointer-events: auto;
+}
+
+.event-label.is-legend-full {
+  padding-right: 1px;
+  mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
 }
 
 .label-base {
@@ -234,7 +242,6 @@
   pointer-events: none;
   z-index: 110;
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .date-tag.out-of-bounds {
@@ -294,7 +301,6 @@
   text-decoration: none;
   background-color: hsl(var(--category-color));
   color: #fff;
-  box-shadow: none;
   filter: none;
   opacity: 1;
 }

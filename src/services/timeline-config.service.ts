@@ -28,6 +28,7 @@ export class TimelineConfigService {
   readonly viewPaddingRight = computed(() => 80);
 
   readonly categoryHeaderHeight = computed(() => this.baseFontSize() * 3.2);
+  readonly categoryHeaderMarginBottom = computed(() => 2);
   readonly subcategoryHeaderHeight = computed(() => this.baseFontSize() * 2);
   readonly subcategoryMarginBottom = computed(() => this.baseFontSize() * 0.6);
 

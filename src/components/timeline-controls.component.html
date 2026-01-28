@@ -2,7 +2,7 @@
   <div class="top-bar-content">
 
     <div class="branding-area">
-      <button class="menu-button" (click)="state.toggleSidebar()" aria-label="Toggle Menu">
+      <button class="menu-button" (click)="ui.toggleSidebar()">
         <app-icon name="menu" [size]="20" />
       </button>
       <h1 class="app-title">Visualize History Timeline</h1>
@@ -21,7 +21,7 @@
           <span class="search-count-badge">
             {{ state.matchCount() }}
           </span>
-          <button class="clear-button" (click)="clearSearch()" aria-label="Clear search">
+          <button class="clear-button" (click)="clearSearch()">
             <app-icon name="x" [size]="12" [strokeWidth]="3" />
           </button>
         </div>
@@ -33,13 +33,20 @@
           (ngModelChange)="state.isFilterMode.set($event)" />
         <label for="filterCheck" title="Hide non-matching items">Filter View</label>
       </div>
+
+      <div class="filter-toggle" [class.is-active]="state.hideSmallEvents()">
+        <input type="checkbox" id="hideSmallCheck" [ngModel]="state.hideSmallEvents()"
+          (ngModelChange)="state.hideSmallEvents.set($event)" />
+        <label for="hideSmallCheck" title="Hide events smaller than 1px">Hide Small</label>
+      </div>
     </div>
 
     <div class="controls-area">
       <div class="control-group">
         <label class="input-label">Size</label>
-        <input type="number" min="8" max="32" [ngModel]="config.baseFontSize()"
-          (ngModelChange)="config.baseFontSize.set($event)" class="year-input" style="width: 50px;" />
+        <app-number-input [value]="config.baseFontSize()" (valueChange)="config.baseFontSize.set($event)" [min]="8"
+          [max]="32" style="width: 70px;">
+        </app-number-input>
       </div>
     </div>
   </div>

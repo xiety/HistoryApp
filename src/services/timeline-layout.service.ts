@@ -187,10 +187,20 @@ export class TimelineLayoutService {
     const candidates: LayoutCandidate[] = [];
 
     for (const raw of events) {
-      if (raw.end < viewStart || raw.start > viewEnd) continue;
+      let visualStart = raw.start;
+      let visualEnd = raw.end;
 
-      const rawStartX = sidePadding + ((raw.start - viewStart) * pixelsPerYear);
-      const durationYears = Math.max(1, raw.end - raw.start);
+      if (raw.start === raw.end) {
+        visualEnd = raw.start + 1;
+      } else {
+        visualStart += 0.5;
+        visualEnd += 0.5;
+      }
+
+      if (visualEnd < viewStart || visualStart > viewEnd) continue;
+
+      const durationYears = Math.max(1, visualEnd - visualStart);
+      const rawStartX = sidePadding + ((visualStart - viewStart) * pixelsPerYear);
       const rawEndX = rawStartX + (durationYears * pixelsPerYear);
 
       let x = Math.round(rawStartX);

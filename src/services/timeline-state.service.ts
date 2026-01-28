@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal, effect } from '@angular/core';
 import { Subject } from 'rxjs';
-import { TimelineParserService, TimelineData, CategoryData, SubcategoryData } from './timeline-parser.service';
+import { TimelineParserService, TimelineData, CategoryData, SubcategoryData, RawEvent } from './timeline-parser.service';
 import { TimelineLayoutService, SubcategoryLayout } from './timeline-layout.service';
 import { TimelineConfigService } from './timeline-config.service';
 import { DATA_SOURCE_URL } from '../config/example-data';
@@ -23,6 +23,12 @@ export interface TocItem {
   countVisible: number;
 }
 
+export interface TocToggleState {
+  checked: boolean;
+  indeterminate: boolean;
+  hasItems: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -37,35 +43,27 @@ export class TimelineStateService {
   readonly scrollTo$ = this._scrollTo$.asObservable();
 
   readonly inputText = signal<string>('');
-  readonly startYear = signal<number>(this.config.defaultStartYear);
-  readonly endYear = signal<number>(this.config.defaultEndYear);
-  readonly containerWidth = signal<number>(1000);
-  readonly activeCategoryId = signal<number | null>(null);
-  readonly visibleCategoryIds = signal<Set<number>>(new Set());
-
-  readonly searchQuery = signal<string>('');
-  readonly isFilterMode = signal<boolean>(false);
-
-  readonly hiddenCategoryIds = signal<Set<number>>(new Set());
-  readonly onlyShowVisibleInToc = signal<boolean>(false);
-
-  readonly isSidebarOpen = signal<boolean>(false);
   readonly isLoading = signal<boolean>(false);
 
+  readonly containerWidth = signal<number>(1000);
+  readonly startYear = signal<number>(this.config.defaultStartYear);
+  readonly endYear = signal<number>(this.config.defaultEndYear);
+
+  readonly activeCategoryId = signal<number | null>(null);
+  readonly visibleCategoryIds = signal<Set<number>>(new Set());
   readonly hoveredYear = signal<number | null>(null);
   readonly persistentMarkerYear = signal<number | null>(null);
 
-  constructor() {
-    const saved = localStorage.getItem(this.STORAGE_KEY);
-    if (saved !== null && saved.trim() !== '') {
-      this.inputText.set(saved);
-    } else {
-      this.loadFromUrl();
-    }
+  readonly searchQuery = signal<string>('');
+  readonly isFilterMode = signal<boolean>(false);
+  readonly hideSmallEvents = signal<boolean>(false);
+  readonly hiddenCategoryIds = signal<Set<number>>(new Set());
+  readonly onlyShowVisibleInToc = signal<boolean>(false);
 
-    effect(() => {
-      localStorage.setItem(this.STORAGE_KEY, this.inputText());
-    });
+  readonly tocFilterQuery = signal<string>('');
+
+  constructor() {
+    this.initPersistence();
   }
 
   readonly parsedData = computed(() => this.parser.parse(this.inputText()));
@@ -75,51 +73,56 @@ export class TimelineStateService {
     max: this.parsedData().maxYear
   }));
 
-  readonly enabledData = computed<TimelineData>(() => {
-    const fullData = this.parsedData();
-    const hidden = this.hiddenCategoryIds();
+  readonly layoutWidth = computed(() => Math.max(10, this.containerWidth() - this.config.viewPaddingRight()));
 
-    if (hidden.size === 0) {
-      return fullData;
-    }
-
-    return {
-      ...fullData,
-      categories: fullData.categories.filter(cat => !hidden.has(cat.id))
-    };
+  readonly pixelsPerYear = computed(() => {
+    const span = this.endYear() - this.startYear();
+    if (span <= 0) return 0;
+    const effectiveWidth = Math.max(1, this.layoutWidth() - (2 * this.config.sidePadding()));
+    return effectiveWidth / span;
   });
 
-  private readonly searchResult = computed(() => {
-    const query = this.searchQuery().trim();
+  private readonly activeData = computed<TimelineData>(() => {
+    const data = this.parsedData();
+    const hideSmall = this.hideSmallEvents();
+
+    if (!hideSmall) return data;
+
+    const ppy = this.pixelsPerYear();
+    if (ppy <= 0) return data;
+
+    const categories: CategoryData[] = data.categories.map(cat => ({
+      ...cat,
+      subcategories: cat.subcategories.map(sub => ({
+        ...sub,
+        events: sub.events.filter(evt => {
+          const dur = Math.max(1, evt.end - evt.start);
+          return (dur * ppy) >= 1;
+        })
+      }))
+    }));
+
+    return { ...data, categories };
+  });
+
+  private readonly searchIndex = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
     if (!query) return null;
 
-    const lowerQuery = query.toLowerCase();
     const matches = new Set<number>();
     let min = Infinity;
     let max = -Infinity;
 
-    const data = this.parsedData();
+    const data = this.activeData();
 
     for (const cat of data.categories) {
-      const isCategoryMatch = cat.name.toLowerCase().includes(lowerQuery);
-
       for (const sub of cat.subcategories) {
-        const isSubcategoryMatch = sub.name && sub.name.toLowerCase().includes(lowerQuery);
-
         for (const evt of sub.events) {
-          let isMatch = isCategoryMatch || isSubcategoryMatch;
+          const nameMatch = evt.name.toLowerCase().includes(query);
+          const startMatch = evt.start.toString() === query;
+          const endMatch = evt.end.toString() === query;
 
-          if (!isMatch) {
-            const matchName = evt.name.toLowerCase().includes(lowerQuery);
-            const matchStart = evt.start.toString() === query;
-            const matchEnd = evt.end.toString() === query;
-
-            if (matchName || matchStart || matchEnd) {
-              isMatch = true;
-            }
-          }
-
-          if (isMatch) {
+          if (nameMatch || startMatch || endMatch) {
             matches.add(evt.id);
             if (evt.start < min) min = evt.start;
             if (evt.end > max) max = evt.end;
@@ -130,316 +133,346 @@ export class TimelineStateService {
 
     return {
       matches,
-      bounds: min === Infinity ? null : { min, max }
+      bounds: matches.size > 0 ? { min, max } : null
     };
   });
 
-  readonly matchingEventIds = computed(() => this.searchResult()?.matches ?? null);
+  readonly matchingEventIds = computed(() => this.searchIndex()?.matches ?? null);
+  readonly matchCount = computed(() => this.matchingEventIds()?.size ?? 0);
+  readonly matchingBounds = computed(() => this.searchIndex()?.bounds ?? null);
 
-  readonly matchCount = computed(() => {
+  readonly gridLines = computed(() =>
+    this.layout.generateGridLines(this.startYear(), this.endYear(), this.layoutWidth(), this.config.minGridGap())
+  );
+
+  readonly renderableData = computed<TimelineData>(() => {
+    const data = this.activeData();
+    const hidden = this.hiddenCategoryIds();
+    const filter = this.isFilterMode();
     const matches = this.matchingEventIds();
-    return matches ? matches.size : 0;
-  });
+    const isSearch = !!matches;
 
-  readonly matchingBounds = computed(() => this.searchResult()?.bounds ?? null);
-
-  readonly activeBounds = computed(() => {
-    const mBounds = this.matchingBounds();
-    return mBounds !== null ? mBounds : this.dataBounds();
-  });
-
-  readonly displayData = computed<TimelineData>(() => {
-    const data = this.enabledData();
-    const query = this.searchQuery().trim();
-    const filterMode = this.isFilterMode();
-    const matchIds = this.matchingEventIds();
-
-    if (!query || !filterMode || !matchIds) {
-      return data;
+    if (!filter && hidden.size === 0) {
+      return this.cleanEmptyData(data);
     }
 
-    const newCategories: CategoryData[] = [];
+    const categories: CategoryData[] = [];
 
     for (const cat of data.categories) {
-      const newSubcategories: SubcategoryData[] = [];
+      if (hidden.has(cat.id)) continue;
+
+      const subcategories: SubcategoryData[] = [];
 
       for (const sub of cat.subcategories) {
-        const matchingEvents = sub.events.filter(e => matchIds.has(e.id));
+        let events = sub.events;
 
-        if (matchingEvents.length > 0) {
-          newSubcategories.push({
-            ...sub,
-            events: matchingEvents
-          });
+        if (filter && isSearch) {
+          events = events.filter(evt => matches.has(evt.id));
+        }
+
+        if (events.length > 0) {
+          subcategories.push({ ...sub, events });
         }
       }
 
-      if (newSubcategories.length > 0) {
-        newCategories.push({
-          ...cat,
-          subcategories: newSubcategories
-        });
+      if (subcategories.length > 0) {
+        categories.push({ ...cat, subcategories });
       }
     }
 
-    return {
-      ...data,
-      categories: newCategories
-    };
+    return { ...data, categories };
   });
 
-  readonly densityData = computed<DensityData>(() => {
-    const data = this.enabledData();
-    const bounds = this.dataBounds();
-    const totalSpan = bounds.max - bounds.min;
-    const matchIds = this.matchingEventIds();
-    const hasSearch = this.searchQuery().trim().length > 0 && !!matchIds;
-    const filterMode = this.isFilterMode();
-
-    const binCount = 200;
-    const totalBins = new Array(binCount).fill(0);
-    const matchingBins = hasSearch ? new Array(binCount).fill(0) : null;
-
-    if (totalSpan <= 0) {
-      return { total: totalBins, matching: matchingBins };
-    }
-
-    const yearsPerBin = totalSpan / binCount;
-
+  private cleanEmptyData(data: TimelineData): TimelineData {
+    const categories: CategoryData[] = [];
     for (const cat of data.categories) {
+      const subcategories: SubcategoryData[] = [];
       for (const sub of cat.subcategories) {
-        for (const evt of sub.events) {
-
-          const isMatch = hasSearch && matchIds?.has(evt.id);
-
-          if (filterMode && !isMatch) {
-            continue;
-          }
-
-          const startBin = Math.max(0, Math.min(binCount - 1, Math.floor((evt.start - bounds.min) / yearsPerBin)));
-          const endBin = Math.max(0, Math.min(binCount - 1, Math.floor((evt.end - bounds.min) / yearsPerBin)));
-
-          for (let i = startBin; i <= endBin; i++) {
-            totalBins[i]++;
-            if (isMatch && matchingBins) {
-              matchingBins[i]++;
-            }
-          }
-        }
+        if (sub.events.length > 0) subcategories.push(sub);
       }
+      if (subcategories.length > 0) categories.push({ ...cat, subcategories });
     }
-
-    const maxCount = Math.max(1, ...totalBins);
-    const normalizedTotal = totalBins.map(count => count / maxCount);
-    const normalizedMatching = matchingBins ? matchingBins.map(count => count / maxCount) : null;
-
-    return {
-      total: normalizedTotal,
-      matching: normalizedMatching
-    };
-  });
-
-  readonly layoutWidth = computed(() => Math.max(10, this.containerWidth() - this.config.viewPaddingRight()));
+    return { ...data, categories };
+  }
 
   readonly processedLayout = computed(() => {
-    const data = this.displayData();
+    const data = this.renderableData();
     const width = this.layoutWidth();
-    const sYear = this.startYear();
-    const eYear = this.endYear();
+    const start = this.startYear();
+    const end = this.endYear();
 
     return data.categories.flatMap(cat => {
       const sublayouts: SubcategoryLayout[] = [];
 
       for (const sub of cat.subcategories) {
-        const res = this.layout.computeLayout(sub.events, width, sYear, eYear);
+        const res = this.layout.computeLayout(sub.events, width, start, end);
         if (res.rowCount > 0) {
           sublayouts.push({ id: sub.id, name: sub.name, ...res });
         }
       }
 
       return sublayouts.length > 0 ?
-        [{ id: cat.id, name: cat.name, color: cat.color, subcategories: sublayouts }] :
-        [];
+        [{ id: cat.id, name: cat.name, color: cat.color, subcategories: sublayouts }] : [];
     });
   });
 
+  readonly activeBounds = computed(() => {
+    const hidden = this.hiddenCategoryIds();
+    const matches = this.matchingEventIds();
+    const isSearch = !!matches;
+
+    let min = Infinity;
+    let max = -Infinity;
+    let found = false;
+
+    const data = this.activeData();
+
+    for (const cat of data.categories) {
+      if (hidden.has(cat.id)) continue;
+
+      for (const sub of cat.subcategories) {
+        for (const evt of sub.events) {
+          if (isSearch && matches && !matches.has(evt.id)) continue;
+
+          if (evt.start < min) min = evt.start;
+          if (evt.end > max) max = evt.end;
+          found = true;
+        }
+      }
+    }
+    return found ? { min, max } : null;
+  });
+
+  readonly densityData = computed<DensityData>(() => {
+    const bounds = this.dataBounds();
+    const span = bounds.max - bounds.min;
+    if (span <= 0) return { total: [], matching: null };
+
+    const bins = 200;
+    const step = span / bins;
+
+    const total = new Array(bins).fill(0);
+    const matching = this.matchingEventIds() ? new Array(bins).fill(0) : null;
+    const matches = this.matchingEventIds();
+
+    const data = this.renderableData();
+    let maxVal = 0;
+
+    for (const cat of data.categories) {
+      for (const sub of cat.subcategories) {
+        for (const evt of sub.events) {
+          const sIdx = Math.floor((evt.start - bounds.min) / step);
+          const eIdx = Math.floor((evt.end - bounds.min) / step);
+
+          const start = Math.max(0, Math.min(bins - 1, sIdx));
+          const end = Math.max(0, Math.min(bins - 1, eIdx));
+
+          const isMatch = matching && matches?.has(evt.id);
+
+          for (let i = start; i <= end; i++) {
+            total[i]++;
+            if (isMatch) matching[i]++;
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < bins; i++) if (total[i] > maxVal) maxVal = total[i];
+    const invMax = maxVal > 0 ? 1 / maxVal : 0;
+
+    return {
+      total: total.map(v => v * invMax),
+      matching: matching ? matching.map(v => v * invMax) : null
+    };
+  });
+
+
   readonly tocItems = computed<TocItem[]>(() => {
-    const allCategories = this.parsedData().categories;
-
-    const hiddenSet = this.hiddenCategoryIds();
-
-    const isSearchActive = this.searchQuery().trim().length > 0;
-    const matchIds = this.matchingEventIds();
-
-    const showVisibleOnly = this.onlyShowVisibleInToc();
+    const hidden = this.hiddenCategoryIds();
+    const visibleVertically = this.visibleCategoryIds();
+    const matches = this.matchingEventIds();
+    const isSearch = !!matches;
 
     const sYear = this.startYear();
     const eYear = this.endYear();
-    const visibleVerticallySet = this.visibleCategoryIds();
 
-    return allCategories
-      .map(cat => {
-        const isHidden = hiddenSet.has(cat.id);
+    const items: TocItem[] = [];
+    const showVisibleOnly = this.onlyShowVisibleInToc();
+    const data = this.activeData();
 
-        let total = 0;
-        let filtered = 0;
-        let visible = 0;
+    for (const cat of data.categories) {
+      let cTotal = 0;
+      let cFiltered = 0;
+      let cVisible = 0;
+      let cPotential = 0;
 
-        for (const sub of cat.subcategories) {
-          for (const evt of sub.events) {
-            total++;
+      const isCatHidden = hidden.has(cat.id);
 
-            if (isHidden) {
-              continue;
-            }
+      for (const sub of cat.subcategories) {
+        for (const evt of sub.events) {
+          cTotal++;
 
-            const isMatch = !isSearchActive || (matchIds && matchIds.has(evt.id));
+          const isMatch = !isSearch || (matches && matches.has(evt.id));
+          if (!isMatch) continue;
 
-            if (isMatch) {
-              filtered++;
-              if (evt.end >= sYear && evt.start <= eYear) {
-                visible++;
-              }
+          cFiltered++;
+
+          if (evt.end >= sYear && evt.start <= eYear) {
+            cPotential++;
+            if (!isCatHidden) {
+              cVisible++;
             }
           }
         }
+      }
 
-        const isFilteredOut = isSearchActive && filtered === 0 && !isHidden;
-        const isOffScreen = filtered > 0 && visible === 0 && !isHidden;
+      const isFilteredOut = isSearch && cFiltered === 0;
+      const isOffScreen = cFiltered > 0 && cPotential === 0 && !isCatHidden;
 
-        return {
-          id: cat.id,
-          name: cat.name,
-          color: `hsl(${cat.color})`,
-          isHidden,
-          isFilteredOut,
-          isOffScreen,
-          isVisibleVertically: visibleVerticallySet.has(cat.id),
-          countTotal: total,
-          countFiltered: filtered,
-          countVisible: visible
-        };
-      })
-      .filter(item => {
-        if (!showVisibleOnly) return true;
-        if (item.isHidden) return false;
-        if (item.isFilteredOut) return false;
-        if (item.isOffScreen) return false;
-        return true;
+      if (showVisibleOnly) {
+        if (cFiltered === 0) continue;
+        if (cPotential === 0) continue;
+      }
+
+      items.push({
+        id: cat.id,
+        name: cat.name,
+        color: `hsl(${cat.color})`,
+        isHidden: isCatHidden,
+        isFilteredOut,
+        isOffScreen,
+        isVisibleVertically: visibleVertically.has(cat.id),
+        countTotal: cTotal,
+        countFiltered: cFiltered,
+        countVisible: cVisible
       });
+    }
+    return items;
   });
 
-  readonly gridLines = computed(() =>
-    this.layout.generateGridLines(
-      this.startYear(),
-      this.endYear(),
-      this.layoutWidth(),
-      this.config.minGridGap()
-    )
-  );
+  readonly filteredTocItems = computed(() => {
+    const items = this.tocItems();
+    const query = this.tocFilterQuery().trim().toLowerCase();
 
-  setText(text: string) {
-    this.inputText.set(text);
-  }
+    if (!query) return items;
 
-  setRange(start: number, end: number) {
-    this.startYear.set(start);
-    this.endYear.set(end);
-  }
+    return items.filter(item => item.name.toLowerCase().includes(query));
+  });
 
-  setContainerWidth(width: number) {
-    this.containerWidth.set(width);
-  }
+  readonly tocToggleState = computed<TocToggleState>(() => {
+    const items = this.filteredTocItems();
+    const count = items.length;
 
-  setActiveCategory(id: number | null) {
-    this.activeCategoryId.set(id);
-  }
+    if (count === 0) {
+      return { checked: false, indeterminate: false, hasItems: false };
+    }
+
+    const checkedCount = items.filter(i => !i.isHidden).length;
+    const allVisible = checkedCount === count;
+    const someVisible = checkedCount > 0 && checkedCount < count;
+
+    return {
+      checked: allVisible,
+      indeterminate: someVisible,
+      hasItems: true
+    };
+  });
+
+  readonly tocTotals = computed(() => {
+    const items = this.tocItems();
+    return items.reduce((acc, item) => ({
+      total: acc.total + item.countTotal,
+      filtered: acc.filtered + item.countFiltered,
+      visible: acc.visible + item.countVisible,
+      checkedCategories: acc.checkedCategories + (item.isHidden ? 0 : 1),
+      totalCategories: items.length
+    }), {
+      total: 0,
+      filtered: 0,
+      visible: 0,
+      checkedCategories: 0,
+      totalCategories: items.length
+    });
+  });
+
+  setText(text: string) { this.inputText.set(text); }
+  setRange(start: number, end: number) { this.startYear.set(start); this.endYear.set(end); }
+  setContainerWidth(width: number) { this.containerWidth.set(width); }
+  setActiveCategory(id: number | null) { this.activeCategoryId.set(id); }
+  setTocFilterQuery(query: string) { this.tocFilterQuery.set(query); }
 
   setVisibleCategoryIds(ids: Set<number>) {
-    const current = this.visibleCategoryIds();
-    if (current.size === ids.size) {
-      let same = true;
-      for (const id of ids) {
-        if (!current.has(id)) {
-          same = false;
-          break;
-        }
-      }
-      if (same) return;
+    const prev = this.visibleCategoryIds();
+    if (prev.size !== ids.size || [...ids].some(id => !prev.has(id))) {
+      this.visibleCategoryIds.set(ids);
     }
-    this.visibleCategoryIds.set(ids);
   }
 
-  setHoveredYear(year: number | null) {
-    this.hoveredYear.set(year);
-  }
-
-  setPersistentMarker(year: number | null) {
-    this.persistentMarkerYear.set(year);
-  }
+  setHoveredYear(year: number | null) { this.hoveredYear.set(year); }
+  setPersistentMarker(year: number | null) { this.persistentMarkerYear.set(year); }
 
   toggleCategoryVisibility(id: number) {
-    this.hiddenCategoryIds.update(set => {
-      const newSet = new Set(set);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
+    this.hiddenCategoryIds.update(s => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
   }
 
-  toggleAllCategories(shouldBeVisible: boolean) {
-    if (shouldBeVisible) {
-      this.hiddenCategoryIds.set(new Set());
-    } else {
-      const allIds = this.parsedData().categories.map(c => c.id);
-      this.hiddenCategoryIds.set(new Set(allIds));
+  setCategoryVisibilityMulti(ids: Iterable<number>, visible: boolean) {
+    this.hiddenCategoryIds.update(current => {
+      const next = new Set(current);
+      for (const id of ids) {
+        if (visible) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }
+
+  toggleAllFilteredCategories() {
+    const state = this.tocToggleState();
+    if (!state.hasItems) return;
+
+    const targetVisible = !state.checked;
+    const items = this.filteredTocItems();
+    const ids = items.map(item => item.id);
+
+    if (ids.length > 0) {
+      this.setCategoryVisibilityMulti(ids, targetVisible);
     }
   }
 
-  setOnlyShowVisibleInToc(enabled: boolean) {
-    this.onlyShowVisibleInToc.set(enabled);
-  }
-
-  toggleSidebar() {
-    this.isSidebarOpen.update(v => !v);
-  }
-
-  closeSidebar() {
-    this.isSidebarOpen.set(false);
-  }
+  setOnlyShowVisibleInToc(val: boolean) { this.onlyShowVisibleInToc.set(val); }
 
   fitData() {
-    const bounds = this.activeBounds();
+    const b = this.activeBounds();
+    if (!b) return;
+    if (b.min === b.max) this.setRange(b.min - 1, b.max + 1);
+    else this.setRange(b.min, b.max);
+  }
 
-    if (!bounds) return;
-
-    if (bounds.min === bounds.max) {
-      this.setRange(bounds.min - 1, bounds.max + 1);
-    } else {
-      this.setRange(bounds.min, bounds.max);
-    }
+  requestScrollToCategory(id: number) {
+    this._scrollTo$.next(id);
   }
 
   async loadFromUrl() {
     this.isLoading.set(true);
     try {
-      const response = await fetch(DATA_SOURCE_URL);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const text = await response.text();
-      this.inputText.set(text);
-      this.setRange(this.config.defaultStartYear, this.config.defaultEndYear);
-    } catch (e) {
-      console.error('Failed to load data', e);
-    } finally {
-      this.isLoading.set(false);
-    }
+      const res = await fetch(DATA_SOURCE_URL);
+      if (!res.ok) throw new Error('Fetch error');
+      this.inputText.set(await res.text());
+      this.startYear.set(this.config.defaultStartYear);
+      this.endYear.set(this.config.defaultEndYear);
+    } catch (e) { console.error(e); }
+    finally { this.isLoading.set(false); }
   }
 
-  requestScrollToCategory(id: number) {
-    this._scrollTo$.next(id);
-    this.closeSidebar();
+  private initPersistence() {
+    const saved = localStorage.getItem(this.STORAGE_KEY);
+    if (saved?.trim()) this.inputText.set(saved);
+    else this.loadFromUrl();
+
+    effect(() => localStorage.setItem(this.STORAGE_KEY, this.inputText()));
   }
 }

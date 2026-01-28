@@ -3,10 +3,11 @@ import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
+import { YearFormatPipe, formatYear } from '../pipes/year-format.pipe';
 
 @Component({
   selector: 'app-timeline-ruler',
-  imports: [CommonModule],
+  imports: [CommonModule, YearFormatPipe],
   templateUrl: './timeline-ruler.component.html',
   styleUrls: ['./timeline-ruler.component.css']
 })
@@ -19,8 +20,7 @@ export class TimelineRulerComponent {
     if (this.hoveredYearX() === null) return null;
 
     const year = this.state.hoveredYear();
-    if (year === null) return null;
-    return Math.round(year);
+    return formatYear(year);
   });
 
   readonly hoveredYearX = computed(() => {
@@ -44,8 +44,7 @@ export class TimelineRulerComponent {
     if (this.persistentMarkerX() === null) return null;
 
     const year = this.state.persistentMarkerYear();
-    if (year === null) return null;
-    return Math.round(year);
+    return formatYear(year);
   });
 
   readonly persistentMarkerX = computed(() => {

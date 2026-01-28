@@ -1,10 +1,9 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineEditorComponent } from './timeline-editor.component';
 import { TimelineTocComponent } from './timeline-toc.component';
 import { TimelineStateService } from '../services/timeline-state.service';
-
-type SidebarTab = 'editor' | 'toc';
+import { TimelineUiStateService } from '../services/timeline-ui-state.service';
 
 @Component({
   selector: 'app-timeline-sidebar',
@@ -14,10 +13,10 @@ type SidebarTab = 'editor' | 'toc';
 })
 export class TimelineSidebarComponent {
   state = inject(TimelineStateService);
-
-  activeTab = signal<SidebarTab>('editor');
+  ui = inject(TimelineUiStateService);
 
   onScrollToCategory(id: number) {
     this.state.requestScrollToCategory(id);
+    this.ui.setSidebarOpen(false);
   }
 }

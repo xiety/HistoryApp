@@ -1,4 +1,4 @@
-import { Component, inject, viewChild, ElementRef, computed, effect, untracked, DestroyRef, afterNextRender } from '@angular/core';
+import { Component, inject, viewChild, ElementRef, computed, effect } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
@@ -23,12 +23,8 @@ export class TimelineWorkspaceComponent {
   state = inject(TimelineStateService);
   layout = inject(TimelineLayoutService);
   private scrollSync = inject(ScrollSyncService);
-  private destroyRef = inject(DestroyRef);
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
-
-  private scrollFrameId: number | null = null;
-  private resizeObserver: ResizeObserver | null = null;
 
   readonly cursorGuideX = computed(() => {
     const year = this.state.hoveredYear();
@@ -49,27 +45,18 @@ export class TimelineWorkspaceComponent {
 
     effect(() => {
       this.state.processedLayout();
-
-      untracked(() => {
-        setTimeout(() => {
-          this.onScroll();
-        }, 0);
-      });
+      this.updateVisibility();
     });
 
-    afterNextRender(() => {
-      this.onScroll();
+    effect((onCleanup) => {
+       this.updateVisibility();
 
-      const el = this.scrollContainer().nativeElement;
-      this.resizeObserver = new ResizeObserver(() => {
-        this.onScroll();
-      });
-      this.resizeObserver.observe(el);
-    });
+       const observer = new ResizeObserver(() => {
+         this.updateVisibility();
+       });
+       observer.observe(this.scrollContainer().nativeElement);
 
-    this.destroyRef.onDestroy(() => {
-      if (this.scrollFrameId) cancelAnimationFrame(this.scrollFrameId);
-      this.resizeObserver?.disconnect();
+       onCleanup(() => observer.disconnect());
     });
   }
 
@@ -97,12 +84,7 @@ export class TimelineWorkspaceComponent {
   }
 
   onScroll() {
-    if (this.scrollFrameId) return;
-
-    this.scrollFrameId = requestAnimationFrame(() => {
-      this.updateVisibility();
-      this.scrollFrameId = null;
-    });
+    this.updateVisibility();
   }
 
   private updateVisibility() {

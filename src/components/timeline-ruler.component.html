@@ -4,7 +4,7 @@
     <div class="ruler-grid-layer">
       @for (line of state.gridLines(); track line.label) {
       <div class="ruler-tick" [style.left.px]="line.x"></div>
-      <span class="ruler-label" [style.left.px]="line.x">{{ line.label }}</span>
+      <span class="ruler-label" [style.left.px]="line.x">{{ line.label | yearFormat }}</span>
       }
     </div>
 

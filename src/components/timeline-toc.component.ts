@@ -1,4 +1,4 @@
-import { Component, inject, output, effect, viewChild, ElementRef, computed } from '@angular/core';
+import { Component, inject, output, viewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineStateService } from '../services/timeline-state.service';
@@ -17,13 +17,6 @@ export class TimelineTocComponent {
 
   readonly containerRef = viewChild.required<ElementRef<HTMLElement>>('tocContainer');
 
-  readonly allVisible = computed(() => this.state.hiddenCategoryIds().size === 0);
-  readonly someVisible = computed(() => {
-    const hiddenCount = this.state.hiddenCategoryIds().size;
-    const totalCount = this.state.parsedData().categories.length;
-    return hiddenCount > 0 && hiddenCount < totalCount;
-  });
-
   constructor() {
     effect(() => {
       const activeId = this.state.activeCategoryId();
@@ -31,16 +24,6 @@ export class TimelineTocComponent {
         this.scrollActiveIntoView(activeId);
       }
     });
-  }
-
-  toggleAll() {
-    const shouldShow = !this.allVisible();
-    this.state.toggleAllCategories(shouldShow);
-  }
-
-  toggleItem(id: number, event: Event) {
-    event.stopPropagation();
-    this.state.toggleCategoryVisibility(id);
   }
 
   handleItemClick(id: number) {
@@ -51,14 +34,15 @@ export class TimelineTocComponent {
     }
   }
 
+  clearTocFilter() {
+    this.state.setTocFilterQuery('');
+  }
+
   private scrollActiveIntoView(id: number) {
     const container = this.containerRef().nativeElement;
-
-    setTimeout(() => {
-      const item = container.querySelector(`li[data-id="${id}"]`);
-      if (item) {
-        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    }, 0);
+    const item = container.querySelector(`li[data-id="${id}"]`);
+    if (item) {
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
 }

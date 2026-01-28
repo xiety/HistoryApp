@@ -41,7 +41,16 @@ interface ParserContext {
 })
 export class TimelineParserService {
   private readonly headerRegex = /^#\s*(.+)$/;
-  private readonly eventRegex = /^(.*?)\s+(-?\d+)(?:-(-?\d+))?\s*$/;
+
+  private readonly yearPattern = '-?\\d+(?:\\s*(?:BCE|BC|CE|AD))?';
+
+  private readonly rangePattern = `(?:${this.yearPattern})(?:\\s*[-–]\\s*(?:${this.yearPattern}))?`;
+
+  private readonly datesPart = `(${this.rangePattern}(?:\\s*,\\s*${this.rangePattern})*)`;
+
+  private readonly eventLineRegex = new RegExp(`^(.*?)\\s+${this.datesPart}\\s*$`, 'i');
+
+  private readonly rangeParseRegex = new RegExp(`^(${this.yearPattern})(?:\\s*[-–]\\s*(${this.yearPattern}))?$`, 'i');
 
   parse(text: string): TimelineData {
     const catMap = new Map<string, Map<string, RawEvent[]>>();
@@ -93,39 +102,73 @@ export class TimelineParserService {
   }
 
   private processEventLine(line: string, ctx: ParserContext, map: Map<string, Map<string, RawEvent[]>>): void {
-    const match = line.match(this.eventRegex);
+    const match = line.match(this.eventLineRegex);
     if (!match) return;
 
     const name = match[1].trim();
-    const start = parseInt(match[2], 10);
-    const end = match[3] ? parseInt(match[3], 10) : start;
+    const allDatesStr = match[2];
 
-    if (ctx.minYear === null || start < ctx.minYear) ctx.minYear = start;
-    if (ctx.maxYear === null || end > ctx.maxYear) ctx.maxYear = end;
+    const ranges = this.splitDates(allDatesStr);
+
+    if (ranges.length === 0) return;
 
     const groupId = ++ctx.groupCounter;
 
-    for (const cat of ctx.currentCategories) {
-      let subMap = map.get(cat);
-      if (!subMap) {
-        subMap = new Map<string, RawEvent[]>();
-        map.set(cat, subMap);
-      }
+    for (const rangeStr of ranges) {
+      const rangeMatch = rangeStr.match(this.rangeParseRegex);
+      if (!rangeMatch) continue;
 
-      let eventList = subMap.get(ctx.currentSubcategory);
-      if (!eventList) {
-        eventList = [];
-        subMap.set(ctx.currentSubcategory, eventList);
-      }
+      const startStr = rangeMatch[1];
+      const endStr = rangeMatch[2];
 
-      eventList.push({
-        id: ++ctx.eventInstanceCounter,
-        groupId,
-        name,
-        start,
-        end
-      });
+      const start = this.parseYear(startStr);
+      const end = endStr ? this.parseYear(endStr) : start;
+
+      if (ctx.minYear === null || start < ctx.minYear) ctx.minYear = start;
+      if (ctx.maxYear === null || end > ctx.maxYear) ctx.maxYear = end;
+
+      for (const cat of ctx.currentCategories) {
+        let subMap = map.get(cat);
+        if (!subMap) {
+          subMap = new Map<string, RawEvent[]>();
+          map.set(cat, subMap);
+        }
+
+        let eventList = subMap.get(ctx.currentSubcategory);
+        if (!eventList) {
+          eventList = [];
+          subMap.set(ctx.currentSubcategory, eventList);
+        }
+
+        eventList.push({
+          id: ++ctx.eventInstanceCounter,
+          groupId,
+          name,
+          start,
+          end
+        });
+      }
     }
+  }
+
+  private splitDates(text: string): string[] {
+    return text.split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  private parseYear(raw: string): number {
+    const cleaned = raw.trim().toUpperCase();
+    const isBCE = cleaned.endsWith('BCE') || cleaned.endsWith('BC');
+
+    const numberMatch = cleaned.match(/-?\d+/);
+    if (!numberMatch) return 0;
+
+    let year = parseInt(numberMatch[0], 10);
+
+    if (isBCE) {
+      year = -Math.abs(year);
+    }
+
+    return year;
   }
 
   private normalizeYears(ctx: ParserContext): void {

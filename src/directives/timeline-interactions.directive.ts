@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, signal, input, ChangeDetectorRef, DestroyRef, afterNextRender } from '@angular/core';
+import { Directive, ElementRef, inject, signal, input, ChangeDetectorRef, DestroyRef, effect } from '@angular/core';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { ScrollSyncService, ScrollAnchor } from '../services/scroll-sync.service';
@@ -24,7 +24,6 @@ export class TimelineInteractionsDirective {
   private layout = inject(TimelineLayoutService);
   private scrollSync = inject(ScrollSyncService);
   private cdr = inject(ChangeDetectorRef);
-  private destroyRef = inject(DestroyRef);
 
   readonly isDragging = signal(false);
 
@@ -34,20 +33,19 @@ export class TimelineInteractionsDirective {
   private dragAnchor: ScrollAnchor | null = null;
   private evCache: PointerEvent[] = [];
   private prevPinchDiff = -1;
-  private resizeObserver: ResizeObserver | null = null;
 
   constructor() {
-    afterNextRender(() => {
-      this.resizeObserver = new ResizeObserver(entries => {
+    effect((onCleanup) => {
+      const el = this.elementRef.nativeElement;
+
+      const ro = new ResizeObserver(entries => {
         for (const entry of entries) {
           this.state.setContainerWidth(entry.contentRect.width);
         }
       });
-      this.resizeObserver.observe(this.elementRef.nativeElement);
-    });
+      ro.observe(el);
 
-    this.destroyRef.onDestroy(() => {
-      this.resizeObserver?.disconnect();
+      onCleanup(() => ro.disconnect());
     });
   }
 
@@ -204,32 +202,16 @@ export class TimelineInteractionsDirective {
   }
 
   private applyPan(deltaPixels: number): void {
-    const width = this.state.layoutWidth();
+    const pxPerYear = this.state.pixelsPerYear();
+    if (pxPerYear <= 0) return;
+
+    const yearDelta = deltaPixels / pxPerYear;
+
     const start = this.dragStartYear || this.state.startYear();
     const end = this.dragEndYear || this.state.endYear();
-    const bounds = this.state.dataBounds();
-
-    if (width <= 0) return;
-
-    const effectiveWidth = width - (2 * this.layout.getSidePadding());
-    const safeWidth = Math.max(1, effectiveWidth);
-    const span = end - start;
-    const pxPerYear = safeWidth / span;
-    const yearDelta = deltaPixels / pxPerYear;
 
     let newStart = start + yearDelta;
     let newEnd = end + yearDelta;
-
-    if (newStart < bounds.min) {
-      const d = bounds.min - newStart;
-      newStart += d;
-      newEnd += d;
-    }
-    if (newEnd > bounds.max) {
-      const d = newEnd - bounds.max;
-      newStart -= d;
-      newEnd -= d;
-    }
 
     this.state.setRange(newStart, newEnd);
   }
@@ -238,13 +220,12 @@ export class TimelineInteractionsDirective {
     const currentStart = this.state.startYear();
     const currentEnd = this.state.endYear();
     const containerWidth = this.state.layoutWidth();
-    const dataBounds = this.state.dataBounds();
 
     const span = currentEnd - currentStart;
-    const maxSpan = dataBounds.max - dataBounds.min;
 
-    if (span <= 0.1 && delta < 0) return null;
-    if (span >= maxSpan && delta > 0) return null;
+    if (span <= 0.001 && delta < 0) return null;
+
+    if (span >= Number.MAX_SAFE_INTEGER / 2 && delta > 0) return null;
 
     const sidePadding = this.layout.getSidePadding();
     const effectiveWidth = Math.max(1, containerWidth - (2 * sidePadding));
@@ -253,19 +234,10 @@ export class TimelineInteractionsDirective {
     const yearUnderMouse = currentStart + (span * mouseRatio);
 
     const zoomFactor = delta > 0 ? 1.05 : 0.95;
-    const newSpan = Math.max(0.1, Math.min(span * zoomFactor, maxSpan));
+    const newSpan = span * zoomFactor;
 
     let newStart = yearUnderMouse - (newSpan * mouseRatio);
     let newEnd = newStart + newSpan;
-
-    if (newStart < dataBounds.min) {
-      newStart = dataBounds.min;
-      newEnd = newStart + newSpan;
-    }
-    if (newEnd > dataBounds.max) {
-      newEnd = dataBounds.max;
-      newStart = newEnd - newSpan;
-    }
 
     return { start: newStart, end: newEnd };
   }

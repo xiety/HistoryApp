@@ -18,4 +18,6 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  gap: 2px;
+  background-color: #e2e8f0;
 }

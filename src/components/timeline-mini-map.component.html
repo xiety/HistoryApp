@@ -1,33 +1,33 @@
 <div class="minimap-wrapper">
 
   <div class="control-bar">
-    <div class="bound-label min-label">{{ mapBounds().min }}</div>
+    <div class="bound-label min-label">{{ mapBounds().min | yearFormat }}</div>
 
     <div class="center-controls">
 
-      <button class="nav-button" (click)="jumpTo('start')" [disabled]="!canGoBack()" title="Jump to start">
+      <button class="nav-button" (click)="jumpTo('start')" title="Jump to start">
         <app-icon name="chevrons-left" [size]="12" />
       </button>
 
-      <button class="nav-button" (click)="shiftRange(-1, $event)" [disabled]="!canGoBack()"
+      <button class="nav-button" (click)="shiftRange(-1, $event)"
         title="Shift Left (Shift+Click for 10x)">
         <app-icon name="chevron-left" [size]="12" />
       </button>
 
-      <div class="input-group">
-        <input type="number" [min]="mapBounds().min" [max]="mapBounds().max" [ngModel]="roundedStart()"
-          (ngModelChange)="updateStart($event)" class="range-input start-input" aria-label="Start Year" />
-        <span class="range-separator">-</span>
-        <input type="number" [min]="mapBounds().min" [max]="mapBounds().max" [ngModel]="roundedEnd()"
-          (ngModelChange)="updateEnd($event)" class="range-input end-input" aria-label="End Year" />
-      </div>
+      <app-number-input [value]="state.startYear()" (valueChange)="updateStart($event)" class="input-control">
+      </app-number-input>
 
-      <button class="nav-button" (click)="shiftRange(1, $event)" [disabled]="!canGoForward()"
+      <span class="range-separator">-</span>
+
+      <app-number-input [value]="state.endYear()" (valueChange)="updateEnd($event)" class="input-control">
+      </app-number-input>
+
+      <button class="nav-button" (click)="shiftRange(1, $event)"
         title="Shift Right (Shift+Click for 10x)">
         <app-icon name="chevron-right" [size]="12" />
       </button>
 
-      <button class="nav-button" (click)="jumpTo('end')" [disabled]="!canGoForward()" title="Jump to end">
+      <button class="nav-button" (click)="jumpTo('end')" title="Jump to end">
         <app-icon name="chevrons-right" [size]="12" />
       </button>
 
@@ -36,50 +36,56 @@
       </button>
     </div>
 
-    <div class="bound-label max-label">{{ mapBounds().max }}</div>
+    <div class="bound-label max-label">{{ mapBounds().max | yearFormat }}</div>
   </div>
 
-  <div class="track-container" #mapContainer (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
-    (pointercancel)="onPointerUp($event)" (pointerleave)="onPointerLeave()">
+  <div class="track-wrapper">
+    @let hPct = hoverXPercent();
+    @if (hPct !== null) {
+    <div class="tooltip-layer">
+      <div class="hover-tip" [style.left.%]="hPct">
+        {{ hoverYear() | yearFormat }}
+      </div>
+    </div>
+    }
 
-    <div class="map-content-layer">
-      <svg class="density-chart" preserveAspectRatio="none" width="100%" height="100%"
-        (pointerdown)="onPointerDown($event, 'create')" (lostpointercapture)="onPointerUp($event)">
+    <div class="track-container" #mapContainer (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)" (pointerleave)="onPointerLeave()">
 
-        @for (bar of densityBars(); track bar.x) {
+      <div class="map-content-layer" #contentLayer>
+        <svg class="density-chart" preserveAspectRatio="none" width="100%" height="100%"
+          (pointerdown)="onPointerDown($event, 'create')" (lostpointercapture)="onPointerUp($event)">
 
-        @if (bar.hasDimmed) {
-        <rect class="bar-dimmed" [class.is-search-active]="bar.isSearchActive" [attr.x]="bar.x + '%'"
-          [attr.y]="bar.dimmedY + '%'" [attr.width]="bar.width + '%'" [attr.height]="bar.dimmedHeight + '%'" />
-        }
+          @for (bar of densityBars(); track bar.x) {
 
-        @if (bar.hasMatch) {
-        <rect class="bar-match" [attr.x]="bar.x + '%'" [attr.y]="bar.matchY + '%'" [attr.width]="bar.width + '%'"
-          [attr.height]="bar.matchHeight + '%'" />
-        }
-        }
-      </svg>
+          @if (bar.hasDimmed) {
+          <rect class="bar-dimmed" [class.is-search-active]="bar.isSearchActive" [attr.x]="bar.x + '%'"
+            [attr.y]="bar.dimmedY + '%'" [attr.width]="bar.width + '%'" [attr.height]="bar.dimmedHeight + '%'" />
+          }
 
-      @let range = rangePercent();
-      <div class="viewport-brush" [style.left.%]="range.left" [style.width.%]="range.width"
-        [class.is-dragging]="isDragging()">
-        <div class="resize-handle handle-left" (pointerdown)="onPointerDown($event, 'start')"
-          (lostpointercapture)="onPointerUp($event)"></div>
+          @if (bar.hasMatch) {
+          <rect class="bar-match" [attr.x]="bar.x + '%'" [attr.y]="bar.matchY + '%'" [attr.width]="bar.width + '%'"
+            [attr.height]="bar.matchHeight + '%'" />
+          }
+          }
+        </svg>
 
-        <div class="brush-body" (pointerdown)="onPointerDown($event, 'pan')" (lostpointercapture)="onPointerUp($event)">
+        @let range = rangePercent();
+        <div class="viewport-brush" [style.left.%]="range.left" [style.width.%]="range.width"
+          [class.is-dragging]="isDragging()">
+          <div class="resize-handle handle-left" (pointerdown)="onPointerDown($event, 'start')"
+            (lostpointercapture)="onPointerUp($event)"></div>
+
+          <div class="brush-body" (pointerdown)="onPointerDown($event, 'pan')"
+            (lostpointercapture)="onPointerUp($event)">
+          </div>
+
+          <div class="resize-handle handle-right" (pointerdown)="onPointerDown($event, 'end')"
+            (lostpointercapture)="onPointerUp($event)"></div>
         </div>
 
-        <div class="resize-handle handle-right" (pointerdown)="onPointerDown($event, 'end')"
-          (lostpointercapture)="onPointerUp($event)"></div>
       </div>
 
-      @let hPct = hoverXPercent();
-      @if (hPct !== null) {
-      <div class="hover-tip" [style.left.%]="hPct">
-        {{ formattedHoverYear() }}
-      </div>
-      }
     </div>
-
   </div>
 </div>

@@ -7,7 +7,6 @@
   border-bottom: 1px solid #e2e8f0;
   background-color: white;
   padding: 8px 12px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   z-index: 30;
   position: relative;
 }
@@ -114,7 +113,6 @@
 .search-input:focus {
   background-color: white;
   border-color: #6366f1;
-  box-shadow: 0 0 0 1px #6366f1;
 }
 
 .search-actions {
@@ -203,23 +201,6 @@
   text-transform: uppercase;
 }
 
-.year-input {
-  border-radius: 0.25rem;
-  border: 1px solid #cbd5e1;
-  background-color: white;
-  padding: 4px 6px;
-  font-size: 0.75rem;
-  color: #1e293b;
-  outline: none;
-  text-align: center;
-  appearance: none;
-}
-
-.year-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 1px #6366f1;
-}
-
 .button-group {
   display: flex;
   gap: 8px;
@@ -233,7 +214,6 @@
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
-  box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -45,6 +45,7 @@ export class ScrollSyncService {
     }
 
     const catHeaderHeight = this.config.categoryHeaderHeight();
+    const catHeaderMargin = this.config.categoryHeaderMarginBottom();
 
     for (let i = 0; i < layout.length; i++) {
       const cat = layout[i];
@@ -64,7 +65,8 @@ export class ScrollSyncService {
         };
       }
 
-      let subCurrentY = currentY + catHeaderHeight;
+      let subCurrentY = currentY + catHeaderHeight + catHeaderMargin;
+
       for (let j = 0; j < cat.subcategories.length; j++) {
         const sub = cat.subcategories[j];
         const subH = this.getSubcategoryTotalHeight(sub);
@@ -83,6 +85,19 @@ export class ScrollSyncService {
           };
         }
         subCurrentY += subH;
+      }
+
+      if (absoluteY >= currentY && absoluteY < subCurrentY) {
+         return {
+          type: 'category-header',
+          catId: cat.id,
+          catIndexHint: i,
+          prevCatId,
+          subId: null,
+          subIndexHint: -1,
+          prevSubId: null,
+          offsetY: absoluteY - currentY
+        };
       }
 
       currentY += catHeight;
@@ -142,6 +157,7 @@ export class ScrollSyncService {
     }
 
     targetY += this.config.categoryHeaderHeight();
+    targetY += this.config.categoryHeaderMarginBottom();
 
     let subIndex = -1;
     if (anchor.subId !== null) {
@@ -173,7 +189,7 @@ export class ScrollSyncService {
   }
 
   private getCategoryTotalHeight(cat: CategoryLayout): number {
-    let h = this.config.categoryHeaderHeight();
+    let h = this.config.categoryHeaderHeight() + this.config.categoryHeaderMarginBottom();
     for (const sub of cat.subcategories) {
       h += this.getSubcategoryTotalHeight(sub);
     }

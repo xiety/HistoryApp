@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { YearFormatPipe } from '../pipes/year-format.pipe';
 
 @Component({
   selector: 'app-timeline-view',
-  imports: [CommonModule],
+  imports: [CommonModule, YearFormatPipe],
   templateUrl: './timeline-view.component.html',
   styleUrls: ['./timeline-view.component.css']
 })
@@ -13,21 +14,20 @@ export class TimelineViewComponent {
   state = inject(TimelineStateService);
   config = inject(TimelineConfigService);
 
-  selectedId = signal<string | null>(null);
-
+  selectedEventId = signal<number | null>(null);
   hoveredId = signal<number | null>(null);
 
-  toggleSelection(uniqueKey: string, event: Event) {
+  toggleSelection(eventId: number, event: Event) {
     event.stopPropagation();
-    if (this.selectedId() === uniqueKey) {
-      this.selectedId.set(null);
+    if (this.selectedEventId() === eventId) {
+      this.selectedEventId.set(null);
     } else {
-      this.selectedId.set(uniqueKey);
+      this.selectedEventId.set(eventId);
     }
   }
 
   clearSelection() {
-    this.selectedId.set(null);
+    this.selectedEventId.set(null);
   }
 
   setHovered(rawId: number) {

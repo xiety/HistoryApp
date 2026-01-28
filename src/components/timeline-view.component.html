@@ -10,7 +10,8 @@
   @for (category of state.processedLayout(); track category.id) {
   <section class="category-group" [style.--category-color]="category.color">
 
-    <div class="category-header" [style.height.px]="config.categoryHeaderHeight()">
+    <div class="category-header" [style.height.px]="config.categoryHeaderHeight()"
+      [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
       <h2 class="category-badge">
         {{ category.name }}
       </h2>
@@ -34,44 +35,42 @@
 
           @for (row of sub.rows; track $index) {
           @for (event of row; track event.raw.id) {
-          @let evtId = 'evt-' + event.raw.id;
+
+          @let isLegendFull = event.displayMode === 'legend-full';
+          @let isLegendOverflow = event.displayMode === 'legend-overflow';
+          @let labelText = isLegendFull ? (event.legendId + ' ' + event.raw.name) : (isLegendOverflow ? event.legendId : event.raw.name);
+
           @let isHovered = hoveredId() === event.raw.id;
+          @let isSelected = selectedEventId() === event.raw.id;
 
           <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
             [style.top.px]="event.row * config.rowTotalHeight()" [style.height.px]="config.rowHeight()"
-            [class.selected]="selectedId() === evtId" [class.linked]="isHovered"
-            [class.is-dimmed]="isDimmed(event.raw.id)" (click)="toggleSelection(evtId, $event)"
+            [class.selected]="isSelected" [class.linked]="isHovered"
+            [class.is-dimmed]="isDimmed(event.raw.id)" (click)="toggleSelection(event.raw.id, $event)"
             (mouseenter)="setHovered(event.raw.id)" (mouseleave)="clearHovered()">
             <div class="event-bg" [class.is-single-year]="event.raw.start === event.raw.end"
               [class.no-border-left]="event.clippedLeft"
-              [class.no-border-right]="event.clippedRight || event.displayMode === 'overflow' || event.displayMode === 'legend-overflow'">
+              [class.no-border-right]="event.clippedRight || event.displayMode === 'overflow' || isLegendOverflow">
             </div>
 
             <div class="event-label label-base"
-              [class.event-label--overflow]="event.displayMode === 'overflow' || event.displayMode === 'legend-overflow'">
-              @if (event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow') {
-              <span class="block">{{ event.legendId }}</span>
-              } @else {
-              <span class="block">{{ event.raw.name }}</span>
-              }
+              [class.event-label--overflow]="event.displayMode === 'overflow' || isLegendOverflow"
+              [class.is-legend-full]="isLegendFull">
+              <span class="block">{{ labelText }}</span>
             </div>
 
-            <div class="event-label label-mask" aria-hidden="true">
-              @if (event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow') {
-              <span class="block">{{ event.legendId }}</span>
-              } @else {
-              <span class="block">{{ event.raw.name }}</span>
-              }
+            <div class="event-label label-mask" [class.is-legend-full]="isLegendFull" aria-hidden="true">
+              <span class="block">{{ labelText }}</span>
             </div>
 
-            @if (isHovered || selectedId() === evtId) {
+            @if (isHovered || isSelected) {
             <div class="date-tag start-tag" [class.out-of-bounds]="event.clippedLeft">
-              {{ event.raw.start }}
+              {{ event.raw.start | yearFormat }}
             </div>
 
             @if (event.raw.end !== event.raw.start) {
             <div class="date-tag end-tag" [class.out-of-bounds]="event.clippedRight">
-              {{ event.raw.end }}
+              {{ event.raw.end | yearFormat }}
             </div>
             }
             }
@@ -81,14 +80,15 @@
 
           @for (row of sub.legendRows; track $index) {
           @for (item of row; track item.legendId) {
-          @let legId = 'leg-' + item.raw.id;
+
           @let isHovered = hoveredId() === item.raw.id;
+          @let isSelected = selectedEventId() === item.raw.id;
 
           <div class="legend-item" [style.left.px]="item.x"
             [style.top.px]="sub.legendStartY + (item.row * config.legendRowHeight())"
-            [style.height.px]="config.legendRowHeight()" [class.selected]="selectedId() === legId"
+            [style.height.px]="config.legendRowHeight()" [class.selected]="isSelected"
             [class.linked]="isHovered" [class.is-dimmed]="isDimmed(item.raw.id)"
-            (click)="toggleSelection(legId, $event)" (mouseenter)="setHovered(item.raw.id)"
+            (click)="toggleSelection(item.raw.id, $event)" (mouseenter)="setHovered(item.raw.id)"
             (mouseleave)="clearHovered()">
             {{ item.text }}
           </div>
