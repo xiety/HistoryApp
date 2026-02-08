@@ -9,9 +9,7 @@
   padding: 8px 12px;
   z-index: 30;
   position: relative;
-}
 
-.top-bar-content {
   display: flex;
   align-items: center;
   justify-content: space-between;

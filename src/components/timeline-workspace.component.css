@@ -41,11 +41,6 @@
   background: #94a3b8;
 }
 
-.content-wrapper {
-  min-height: 100%;
-  position: relative;
-}
-
 .cursor-guide-line {
   position: absolute;
   top: 0;

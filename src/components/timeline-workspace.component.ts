@@ -49,14 +49,14 @@ export class TimelineWorkspaceComponent {
     });
 
     effect((onCleanup) => {
-       this.updateVisibility();
+      this.updateVisibility();
 
-       const observer = new ResizeObserver(() => {
-         this.updateVisibility();
-       });
-       observer.observe(this.scrollContainer().nativeElement);
+      const observer = new ResizeObserver(() => {
+        this.updateVisibility();
+      });
+      observer.observe(this.scrollContainer().nativeElement);
 
-       onCleanup(() => observer.disconnect());
+      onCleanup(() => observer.disconnect());
     });
   }
 
@@ -68,6 +68,10 @@ export class TimelineWorkspaceComponent {
       this.state.layoutWidth()
     );
     return x > this.state.layoutWidth() ? null : x;
+  }
+
+  getGuideTransform(x: number | null): string {
+    return x !== null ? `translateX(${x}px)` : '';
   }
 
   private scrollToCategory(id: number) {

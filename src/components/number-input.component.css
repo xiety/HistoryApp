@@ -1,10 +1,6 @@
 :host {
   display: inline-flex;
   min-width: 0;
-}
-
-.stepper-group {
-  display: flex;
   align-items: center;
   background-color: white;
   border: 1px solid #cbd5e1;

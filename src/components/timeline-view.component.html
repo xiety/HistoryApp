@@ -17,88 +17,80 @@
       </h2>
     </div>
 
-    <div class="pl-0">
-      @for (sub of category.subcategories; track sub.id) {
-      <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
-        [style.padding-bottom.px]="config.subcategoryMarginBottom()">
+    @for (sub of category.subcategories; track sub.id) {
+    <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
+      [style.padding-bottom.px]="config.subcategoryMarginBottom()">
 
-        @if (sub.name) {
-        <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
+      @if (sub.name) {
+      <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
+      }
+
+      <div class="events-track" [style.height.px]="sub.height">
+
+        @if (sub.legendRows.length > 0) {
+        <div class="legend-background" [style.top.px]="getLegendBackgroundTop(sub)" [style.bottom.px]="0"></div>
         }
 
-        <div class="events-track" [style.height.px]="sub.height">
+        @for (row of sub.rows; track $index) {
+        @for (event of row; track event.raw.id) {
 
-          @if (sub.legendRows.length > 0) {
-          <div class="legend-background" [style.top.px]="sub.legendStartY - config.legendBlockPadding()"
-            [style.bottom.px]="0"></div>
-          }
+        <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
+          [style.top.px]="getEventTop(event.row)" [style.height.px]="config.rowHeight()"
+          [class.selected]="isGroupActive(event.raw.groupId)" [class.linked]="isGroupActive(event.raw.groupId)"
+          [class.is-dimmed]="isDimmed(event.raw.id)" [title]="getTooltipText(event.raw)"
+          (click)="toggleSelection(event.raw, $event)" (mouseenter)="setHovered(event.raw)"
+          (mouseleave)="clearHovered()">
 
-          @for (row of sub.rows; track $index) {
-          @for (event of row; track event.raw.id) {
+          <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
+            [class.no-border-right]="isRightBorderHidden(event)">
+          </div>
 
-          @let isLegendFull = event.displayMode === 'legend-full';
-          @let isLegendOverflow = event.displayMode === 'legend-overflow';
-          @let labelText = isLegendFull ? (event.legendId + ' ' + event.raw.name) : (isLegendOverflow ? event.legendId : event.raw.name);
-
-          @let isHovered = hoveredId() === event.raw.id;
-          @let isSelected = selectedEventId() === event.raw.id;
-
-          <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
-            [style.top.px]="event.row * config.rowTotalHeight()" [style.height.px]="config.rowHeight()"
-            [class.selected]="isSelected" [class.linked]="isHovered"
-            [class.is-dimmed]="isDimmed(event.raw.id)" (click)="toggleSelection(event.raw.id, $event)"
-            (mouseenter)="setHovered(event.raw.id)" (mouseleave)="clearHovered()">
-            <div class="event-bg" [class.is-single-year]="event.raw.start === event.raw.end"
-              [class.no-border-left]="event.clippedLeft"
-              [class.no-border-right]="event.clippedRight || event.displayMode === 'overflow' || isLegendOverflow">
-            </div>
-
-            <div class="event-label label-base"
-              [class.event-label--overflow]="event.displayMode === 'overflow' || isLegendOverflow"
-              [class.is-legend-full]="isLegendFull">
-              <span class="block">{{ labelText }}</span>
-            </div>
-
-            <div class="event-label label-mask" [class.is-legend-full]="isLegendFull" aria-hidden="true">
-              <span class="block">{{ labelText }}</span>
-            </div>
-
-            @if (isHovered || isSelected) {
-            <div class="date-tag start-tag" [class.out-of-bounds]="event.clippedLeft">
-              {{ event.raw.start | yearFormat }}
-            </div>
-
-            @if (event.raw.end !== event.raw.start) {
-            <div class="date-tag end-tag" [class.out-of-bounds]="event.clippedRight">
-              {{ event.raw.end | yearFormat }}
-            </div>
+          <div class="event-label label-base" [class.event-label--overflow]="isOverflowLabel(event)"
+            [class.is-legend-full]="isLegendFull(event)">
+            @if (hasLegend(event)) {
+            <span class="legend-id">{{ event.legendId }}</span>
             }
+            @if (shouldShowName(event)) {
+            <span class="event-text">{{ event.raw.name }}</span>
             }
           </div>
-          }
-          }
 
-          @for (row of sub.legendRows; track $index) {
-          @for (item of row; track item.legendId) {
-
-          @let isHovered = hoveredId() === item.raw.id;
-          @let isSelected = selectedEventId() === item.raw.id;
-
-          <div class="legend-item" [style.left.px]="item.x"
-            [style.top.px]="sub.legendStartY + (item.row * config.legendRowHeight())"
-            [style.height.px]="config.legendRowHeight()" [class.selected]="isSelected"
-            [class.linked]="isHovered" [class.is-dimmed]="isDimmed(item.raw.id)"
-            (click)="toggleSelection(item.raw.id, $event)" (mouseenter)="setHovered(item.raw.id)"
-            (mouseleave)="clearHovered()">
-            {{ item.text }}
+          <div class="event-label label-mask" [class.is-legend-full]="isLegendFull(event)" aria-hidden="true">
+            @if (hasLegend(event)) {
+            <span class="legend-id">{{ event.legendId }}</span>
+            }
+            @if (shouldShowName(event)) {
+            <span class="event-text">{{ event.raw.name }}</span>
+            }
           </div>
-          }
+
+          @if (isInstanceActive(event.raw.id)) {
+          <ng-container *ngTemplateOutlet="dateTags; context: { raw: event.raw }"></ng-container>
           }
         </div>
+        }
+        }
 
+        @for (row of sub.legendRows; track $index) {
+        @for (item of row; track item.legendId) {
+
+        <div class="legend-item" [style.left.px]="item.x" [style.top.px]="getLegendItemTop(sub, item.row)"
+          [style.height.px]="config.legendRowHeight()" [class.selected]="isInstanceActive(item.raw.id)"
+          [class.linked]="isInstanceActive(item.raw.id)" [class.is-dimmed]="isDimmed(item.raw.id)"
+          [title]="getTooltipText(item.raw)" (click)="toggleSelection(item.raw, $event)"
+          (mouseenter)="setHovered(item.raw)" (mouseleave)="clearHovered()">
+          {{ item.text }}
+
+          @if (isInstanceActive(item.raw.id)) {
+          <ng-container *ngTemplateOutlet="dateTags; context: { raw: item.raw }"></ng-container>
+          }
+        </div>
+        }
+        }
       </div>
-      }
+
     </div>
+    }
   </section>
   }
 
@@ -110,6 +102,18 @@
 
   <div class="border-lines-layer">
     <div class="grid-line-solid" style="left: 0px;"></div>
-    <div class="grid-line-solid" [style.left.px]="state.layoutWidth() - 1"></div>
+    <div class="grid-line-solid" [style.left.px]="getRightBorderX()"></div>
   </div>
+
+  <ng-template #dateTags let-raw="raw">
+    <div class="date-tag start-tag" [class.out-of-bounds]="isOutOfBounds(raw.start, 'start')">
+      {{ raw.start | yearFormat }}
+    </div>
+
+    @if (raw.end !== raw.start) {
+    <div class="date-tag end-tag" [class.out-of-bounds]="isOutOfBounds(raw.end, 'end')">
+      {{ raw.end | yearFormat }}
+    </div>
+    }
+  </ng-template>
 </div>

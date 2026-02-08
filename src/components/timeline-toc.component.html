@@ -41,12 +41,11 @@
 
   <div class="toc-search">
     <app-icon name="search" [size]="12" class="toc-search-icon" />
-    <input type="text" placeholder="Filter categories..." class="toc-search-input"
-           [ngModel]="state.tocFilterQuery()"
-           (ngModelChange)="state.setTocFilterQuery($event)">
+    <input type="text" placeholder="Filter categories..." class="toc-search-input" [ngModel]="state.tocFilterQuery()"
+      (ngModelChange)="state.setTocFilterQuery($event)">
     @if (state.tocFilterQuery()) {
     <button class="toc-search-clear" (click)="clearTocFilter()">
-       <app-icon name="x" [size]="10" [strokeWidth]="3" />
+      <app-icon name="x" [size]="10" [strokeWidth]="3" />
     </button>
     }
   </div>
@@ -64,8 +63,8 @@
         <input type="checkbox" [checked]="!item.isHidden" (change)="state.toggleCategoryVisibility(item.id)" />
       </div>
 
-      <div class="item-content" (click)="handleItemClick(item.id)"
-        [style.border-left-color]="item.isVisibleVertically ? item.color : 'transparent'" [style.color]="item.color">
+      <div class="item-content" (click)="handleItemClick(item.id)" [style.border-left-color]="getItemBorderColor(item)"
+        [style.color]="item.color">
         <span class="toc-name">{{ item.name }}</span>
 
         <div class="toc-badges">
@@ -91,9 +90,9 @@
     @if (state.filteredTocItems().length === 0) {
     <div class="empty-toc">
       @if (state.tocFilterQuery()) {
-        No categories match your filter
+      No categories match your filter
       } @else {
-        No categories available
+      No categories available
       }
     </div>
     }

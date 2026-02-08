@@ -3,18 +3,16 @@
   <app-timeline-ruler></app-timeline-ruler>
 
   <div class="scroll-area custom-scrollbar" #scrollContainer (scroll)="onScroll()">
-    <div class="content-wrapper">
-      <app-timeline-view></app-timeline-view>
-    </div>
+    <app-timeline-view></app-timeline-view>
   </div>
 
   @let pGuideX = persistentGuideX();
   @if (pGuideX !== null) {
-  <div class="persistent-guide-line" [style.transform]="'translateX(' + pGuideX + 'px)'"></div>
+  <div class="persistent-guide-line" [style.transform]="getGuideTransform(pGuideX)"></div>
   }
 
   @let guideX = cursorGuideX();
   @if (guideX !== null) {
-  <div class="cursor-guide-line" [style.transform]="'translateX(' + guideX + 'px)'"></div>
+  <div class="cursor-guide-line" [style.transform]="getGuideTransform(guideX)"></div>
   }
 </main>

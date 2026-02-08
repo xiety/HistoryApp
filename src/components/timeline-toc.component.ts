@@ -1,7 +1,7 @@
 import { Component, inject, output, viewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TimelineStateService } from '../services/timeline-state.service';
+import { TimelineStateService, TocItem } from '../services/timeline-state.service';
 import { IconComponent } from './icon.component';
 
 @Component({
@@ -36,6 +36,10 @@ export class TimelineTocComponent {
 
   clearTocFilter() {
     this.state.setTocFilterQuery('');
+  }
+
+  getItemBorderColor(item: TocItem): string {
+    return item.isVisibleVertically ? item.color : 'transparent';
   }
 
   private scrollActiveIntoView(id: number) {

@@ -10,15 +10,15 @@
 
     @let pX = persistentMarkerX();
     @if (pX !== null) {
-    <div class="persistent-year-badge" [style.transform]="'translateX(' + pX + 'px)'"
-      (click)="clearPersistentMarker($event)" title="Click to remove marker">
+    <div class="persistent-year-badge" [style.transform]="getTransform(pX)" (click)="clearPersistentMarker($event)"
+      title="Click to remove marker">
       {{ persistentMarkerLabel() }}
     </div>
     }
 
     @let hX = hoveredYearX();
     @if (hX !== null) {
-    <div class="active-year-badge" [style.transform]="'translateX(' + hX + 'px)'">
+    <div class="active-year-badge" [style.transform]="getTransform(hX)">
       {{ hoveredYearLabel() }}
     </div>
     }

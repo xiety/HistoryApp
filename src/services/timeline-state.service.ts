@@ -54,6 +54,11 @@ export class TimelineStateService {
   readonly hoveredYear = signal<number | null>(null);
   readonly persistentMarkerYear = signal<number | null>(null);
 
+  readonly selectedEventId = signal<number | null>(null);
+  readonly selectedGroupId = signal<number | null>(null);
+  readonly hoveredEventId = signal<number | null>(null);
+  readonly hoveredGroupId = signal<number | null>(null);
+
   readonly searchQuery = signal<string>('');
   readonly isFilterMode = signal<boolean>(false);
   readonly hideSmallEvents = signal<boolean>(false);
@@ -395,7 +400,11 @@ export class TimelineStateService {
     });
   });
 
-  setText(text: string) { this.inputText.set(text); }
+  setText(text: string) {
+    this.inputText.set(text);
+    this.clearEventSelection();
+  }
+
   setRange(start: number, end: number) { this.startYear.set(start); this.endYear.set(end); }
   setContainerWidth(width: number) { this.containerWidth.set(width); }
   setActiveCategory(id: number | null) { this.activeCategoryId.set(id); }
@@ -410,6 +419,31 @@ export class TimelineStateService {
 
   setHoveredYear(year: number | null) { this.hoveredYear.set(year); }
   setPersistentMarker(year: number | null) { this.persistentMarkerYear.set(year); }
+
+
+  toggleEventSelection(raw: RawEvent) {
+    if (this.selectedEventId() === raw.id) {
+      this.clearEventSelection();
+    } else {
+      this.selectedEventId.set(raw.id);
+      this.selectedGroupId.set(raw.groupId);
+    }
+  }
+
+  clearEventSelection() {
+    this.selectedEventId.set(null);
+    this.selectedGroupId.set(null);
+  }
+
+  setHoveredEvent(raw: RawEvent | null) {
+    if (raw) {
+      this.hoveredEventId.set(raw.id);
+      this.hoveredGroupId.set(raw.groupId);
+    } else {
+      this.hoveredEventId.set(null);
+      this.hoveredGroupId.set(null);
+    }
+  }
 
   toggleCategoryVisibility(id: number) {
     this.hiddenCategoryIds.update(s => {
@@ -461,7 +495,7 @@ export class TimelineStateService {
     try {
       const res = await fetch(DATA_SOURCE_URL);
       if (!res.ok) throw new Error('Fetch error');
-      this.inputText.set(await res.text());
+      this.setText(await res.text());
       this.startYear.set(this.config.defaultStartYear);
       this.endYear.set(this.config.defaultEndYear);
     } catch (e) { console.error(e); }

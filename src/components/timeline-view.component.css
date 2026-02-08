@@ -154,7 +154,6 @@
 .event-label {
   padding-left: 0.4em;
   padding-right: 0;
-
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -164,8 +163,28 @@
 
 .event-label.is-legend-full {
   padding-right: 1px;
+}
+
+.legend-id {
+  flex: none;
+  margin-right: 0.3em;
+  font-weight: 700;
+}
+
+.event-text {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.event-label.is-legend-full .event-text {
   mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
+}
+
+.event-label--overflow .event-text {
+  overflow: visible;
 }
 
 .label-base {

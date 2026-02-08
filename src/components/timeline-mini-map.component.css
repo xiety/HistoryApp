@@ -5,14 +5,8 @@
   border-top: 1px solid #e2e8f0;
   z-index: 40;
   padding: 8px 0 12px 0;
-  gap: 8px;
-  user-select: none;
-}
-
-.minimap-wrapper {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
+  user-select: none;
   width: 100%;
 }
 

@@ -82,4 +82,8 @@ export class TimelineRulerComponent {
     event.stopPropagation();
     this.state.setPersistentMarker(null);
   }
+
+  getTransform(x: number | null): string {
+    return x !== null ? `translateX(${x}px)` : '';
+  }
 }
