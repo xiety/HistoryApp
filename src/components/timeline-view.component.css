@@ -106,7 +106,7 @@
   position: absolute;
   font-size: 1em;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   user-select: none;
   cursor: default;
   display: block;
@@ -159,6 +159,7 @@
   align-items: center;
   height: 100%;
   pointer-events: auto;
+  overflow: hidden;
 }
 
 .event-label.is-legend-full {
@@ -176,15 +177,12 @@
   overflow: hidden;
   white-space: nowrap;
   min-width: 0;
+  padding-bottom: 1px;
 }
 
-.event-label.is-legend-full .event-text {
+.text-fade-mask {
   mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
-}
-
-.event-label--overflow .event-text {
-  overflow: visible;
 }
 
 .label-base {
@@ -192,14 +190,13 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  overflow: hidden;
   z-index: 3;
 }
 
-.event-label--overflow {
-  overflow: visible;
-  width: auto;
+.label-base.is-active {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  padding-right: 8px;
 }
 
 .label-mask {
@@ -209,10 +206,8 @@
   bottom: 0;
   width: 100%;
   overflow: hidden;
-
   color: #fff;
   opacity: 0;
-
   z-index: 6;
   border-radius: 2px;
 }
@@ -221,6 +216,10 @@
 .event-rect.selected,
 .event-rect.linked {
   z-index: 105;
+}
+
+.event-rect.instance-active {
+  z-index: 110;
 }
 
 .event-rect:hover .event-bg,
@@ -299,12 +298,10 @@
   white-space: nowrap;
   cursor: default;
   z-index: 20;
-
   color: hsl(var(--category-color));
   border: none;
   padding: 1px 0.5em;
   border-radius: 2px;
-
   transition: background-color 0.1s, color 0.1s, opacity 0.2s;
 }
 

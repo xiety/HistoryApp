@@ -41,8 +41,10 @@ export class TimelineViewComponent {
 
   getTooltipText(raw: RawEvent): string {
     const startStr = formatYear(raw.start);
-    const endStr = raw.end !== raw.start ? ` - ${formatYear(raw.end)}` : '';
-    return `${raw.name} (${startStr}${endStr})`;
+    const endStr = formatYear(raw.end);
+    return raw.end === raw.start
+      ? `${raw.name} (${startStr})`
+      : `${raw.name} (${startStr}-${endStr})`;
   }
 
   getLegendBackgroundTop(sub: SubcategoryLayout): number {
@@ -81,22 +83,12 @@ export class TimelineViewComponent {
     return event.raw.start === event.raw.end;
   }
 
-  isRightBorderHidden(event: RenderEvent): boolean {
-    return event.clippedRight ||
-      event.displayMode === 'overflow' ||
-      this.isLegendOverflow(event);
-  }
-
-  isOverflowLabel(event: RenderEvent): boolean {
-    return event.displayMode === 'overflow' || this.isLegendOverflow(event);
-  }
-
   hasLegend(event: RenderEvent): boolean {
     return event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow';
   }
 
   shouldShowName(event: RenderEvent): boolean {
-    return event.displayMode !== 'legend-overflow';
+    return true;
   }
 
   isOutOfBounds(year: number, type: 'start' | 'end'): boolean {

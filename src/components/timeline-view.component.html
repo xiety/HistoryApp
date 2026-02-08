@@ -33,25 +33,27 @@
 
         @for (row of sub.rows; track $index) {
         @for (event of row; track event.raw.id) {
+        @let isActive = isInstanceActive(event.raw.id);
 
         <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
           [style.top.px]="getEventTop(event.row)" [style.height.px]="config.rowHeight()"
           [class.selected]="isGroupActive(event.raw.groupId)" [class.linked]="isGroupActive(event.raw.groupId)"
-          [class.is-dimmed]="isDimmed(event.raw.id)" [title]="getTooltipText(event.raw)"
-          (click)="toggleSelection(event.raw, $event)" (mouseenter)="setHovered(event.raw)"
-          (mouseleave)="clearHovered()">
+          [class.instance-active]="isActive" [class.is-dimmed]="isDimmed(event.raw.id)"
+          [title]="getTooltipText(event.raw)" (click)="toggleSelection(event.raw, $event)"
+          (mouseenter)="setHovered(event.raw)" (mouseleave)="clearHovered()">
 
           <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
-            [class.no-border-right]="isRightBorderHidden(event)">
+            [class.no-border-right]="!event.hasRightBorder">
           </div>
 
-          <div class="event-label label-base" [class.event-label--overflow]="isOverflowLabel(event)"
-            [class.is-legend-full]="isLegendFull(event)">
+          <div class="event-label label-base" [class.is-active]="isActive" [class.is-legend-full]="isLegendFull(event)"
+            [style.maxWidth.px]="isActive ? null : event.safeWidth"
+            [style.background-image]="isActive ? 'linear-gradient(to right, transparent ' + event.visualWidth + 'px, #fff ' + event.visualWidth + 'px)' : null">
             @if (hasLegend(event)) {
             <span class="legend-id">{{ event.legendId }}</span>
             }
             @if (shouldShowName(event)) {
-            <span class="event-text">{{ event.raw.name }}</span>
+            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
             }
           </div>
 
@@ -60,11 +62,11 @@
             <span class="legend-id">{{ event.legendId }}</span>
             }
             @if (shouldShowName(event)) {
-            <span class="event-text">{{ event.raw.name }}</span>
+            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
             }
           </div>
 
-          @if (isInstanceActive(event.raw.id)) {
+          @if (isActive) {
           <ng-container *ngTemplateOutlet="dateTags; context: { raw: event.raw }"></ng-container>
           }
         </div>
