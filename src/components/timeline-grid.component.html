@@ -1,0 +1,7 @@
+<div class="grid-lines-layer">
+  @for (line of lines(); track line.label) {
+  <div class="grid-line-vertical" [style.left.%]="line.xPct"></div>
+  }
+  <div class="grid-line-solid" style="left: 0;"></div>
+  <div class="grid-line-solid" style="right: 0;"></div>
+</div>

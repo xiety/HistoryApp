@@ -1,0 +1,24 @@
+:host {
+  display: contents;
+}
+
+.grid-lines-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.grid-line-vertical {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid #e2e8f0;
+}
+
+.grid-line-solid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid #94a3b8;
+}

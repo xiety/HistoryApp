@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { ScrollSyncService } from '../services/scroll-sync.service';
+import { TimelineUiStateService } from '../services/timeline-ui-state.service';
+import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineInteractionsDirective } from '../directives/timeline-interactions.directive';
 import { TimelineRulerComponent } from './timeline-ruler.component';
 import { TimelineViewComponent } from './timeline-view.component';
@@ -22,6 +24,8 @@ import { TimelineViewComponent } from './timeline-view.component';
 export class TimelineWorkspaceComponent {
   state = inject(TimelineStateService);
   layout = inject(TimelineLayoutService);
+  ui = inject(TimelineUiStateService);
+  config = inject(TimelineConfigService);
   private scrollSync = inject(ScrollSyncService);
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
@@ -29,13 +33,13 @@ export class TimelineWorkspaceComponent {
   readonly cursorGuideX = computed(() => {
     const year = this.state.hoveredYear();
     if (year === null) return null;
-    return this.getGuidePosition(year);
+    return this.getGuidePositionPct(year);
   });
 
   readonly persistentGuideX = computed(() => {
     const year = this.state.persistentMarkerYear();
     if (year === null) return null;
-    return this.getGuidePosition(year);
+    return this.getGuidePositionPct(year);
   });
 
   constructor() {
@@ -44,34 +48,45 @@ export class TimelineWorkspaceComponent {
       .subscribe(id => this.scrollToCategory(id));
 
     effect(() => {
-      this.state.processedLayout();
+      const layout = this.state.processedLayout();
+
+
       this.updateVisibility();
     });
 
     effect((onCleanup) => {
-      this.updateVisibility();
+      const el = this.scrollContainer().nativeElement;
+
+      this.updateDimensions();
 
       const observer = new ResizeObserver(() => {
-        this.updateVisibility();
+        this.updateDimensions();
       });
-      observer.observe(this.scrollContainer().nativeElement);
+      observer.observe(el);
 
       onCleanup(() => observer.disconnect());
     });
   }
 
-  private getGuidePosition(year: number): number | null {
+  private updateDimensions() {
+    const el = this.scrollContainer().nativeElement;
+    const newWidth = el.clientWidth;
+
+    if (Math.abs(newWidth - this.state.containerWidth()) < 1) return;
+
+    this.state.setContainerWidth(newWidth);
+  }
+
+  private getGuidePositionPct(year: number): number | null {
+    const width = this.state.layoutWidth();
     const x = this.layout.calculateXPosition(
       year,
       this.state.startYear(),
       this.state.endYear(),
-      this.state.layoutWidth()
+      width
     );
-    return x > this.state.layoutWidth() ? null : x;
-  }
-
-  getGuideTransform(x: number | null): string {
-    return x !== null ? `translateX(${x}px)` : '';
+    if (x > width) return null;
+    return (x / width) * 100;
   }
 
   private scrollToCategory(id: number) {

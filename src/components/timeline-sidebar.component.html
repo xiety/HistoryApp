@@ -1,22 +1,15 @@
-@if (ui.isSidebarOpen()) {
-<div class="sidebar-backdrop" (click)="ui.setSidebarOpen(false)"></div>
-}
+<div class="sidebar-backdrop" [attr.data-mode]="ui.sidebarMode()" (click)="ui.resetSidebarToDefault()"></div>
 
-<aside class="sidebar-container" [class.is-open]="ui.isSidebarOpen()">
+<aside class="sidebar-container" [attr.data-mode]="ui.sidebarMode()">
   <div class="sidebar-tabs">
-    <button class="tab-button" [class.active]="ui.activeSidebarTab() === 'editor'" (click)="ui.setActiveTab('editor')">
-      Data Editor
+    @for (tab of tabs; track tab.id) {
+    <button class="tab-button" [class.active]="ui.activeSidebarTab() === tab.id" (click)="ui.setActiveTab(tab.id)">
+      {{ tab.label }}
     </button>
-    <button class="tab-button" [class.active]="ui.activeSidebarTab() === 'toc'" (click)="ui.setActiveTab('toc')">
-      Table of Contents
-    </button>
+    }
   </div>
 
   <div class="sidebar-content">
-    @if (ui.activeSidebarTab() === 'editor') {
-    <app-timeline-editor></app-timeline-editor>
-    } @else {
-    <app-timeline-toc (scrollToCategory)="onScrollToCategory($event)"></app-timeline-toc>
-    }
+    <ng-container *ngComponentOutlet="activeComponent()"></ng-container>
   </div>
 </aside>

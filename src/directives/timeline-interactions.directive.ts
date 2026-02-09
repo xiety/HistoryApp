@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, signal, input, ChangeDetectorRef, DestroyRef, effect } from '@angular/core';
+import { Directive, ElementRef, inject, signal, input, ChangeDetectorRef } from '@angular/core';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { ScrollSyncService, ScrollAnchor } from '../services/scroll-sync.service';
@@ -33,21 +33,6 @@ export class TimelineInteractionsDirective {
   private dragAnchor: ScrollAnchor | null = null;
   private evCache: PointerEvent[] = [];
   private prevPinchDiff = -1;
-
-  constructor() {
-    effect((onCleanup) => {
-      const el = this.elementRef.nativeElement;
-
-      const ro = new ResizeObserver(entries => {
-        for (const entry of entries) {
-          this.state.setContainerWidth(entry.contentRect.width);
-        }
-      });
-      ro.observe(el);
-
-      onCleanup(() => ro.disconnect());
-    });
-  }
 
   handleWheel(event: WheelEvent): void {
     if (event.ctrlKey || event.metaKey) {
@@ -224,7 +209,6 @@ export class TimelineInteractionsDirective {
     const span = currentEnd - currentStart;
 
     if (span <= 0.001 && delta < 0) return null;
-
     if (span >= Number.MAX_SAFE_INTEGER / 2 && delta > 0) return null;
 
     const sidePadding = this.layout.getSidePadding();

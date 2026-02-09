@@ -17,13 +17,12 @@ export class TimelineRulerComponent {
   private layout = inject(TimelineLayoutService);
 
   readonly hoveredYearLabel = computed(() => {
-    if (this.hoveredYearX() === null) return null;
-
+    if (this.state.hoveredYear() === null) return null;
     const year = this.state.hoveredYear();
     return formatYear(year);
   });
 
-  readonly hoveredYearX = computed(() => {
+  readonly hoveredYearXPct = computed(() => {
     const year = this.state.hoveredYear();
     if (year === null) return null;
 
@@ -36,18 +35,16 @@ export class TimelineRulerComponent {
     );
 
     if (x > width) return null;
-
-    return x;
+    return (x / width) * 100;
   });
 
   readonly persistentMarkerLabel = computed(() => {
-    if (this.persistentMarkerX() === null) return null;
-
+    if (this.state.persistentMarkerYear() === null) return null;
     const year = this.state.persistentMarkerYear();
     return formatYear(year);
   });
 
-  readonly persistentMarkerX = computed(() => {
+  readonly persistentMarkerXPct = computed(() => {
     const year = this.state.persistentMarkerYear();
     if (year === null) return null;
 
@@ -60,20 +57,27 @@ export class TimelineRulerComponent {
     );
 
     if (x > width) return null;
-
-    return x;
+    return (x / width) * 100;
   });
 
   onRulerClick(event: MouseEvent) {
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
+
+
+    const clickX = event.clientX - rect.left;
+    const totalWidth = rect.width;
+    const padding = this.config.viewPaddingRight();
+    const effectiveWidth = totalWidth - padding;
+
+
+    if (clickX > effectiveWidth) return;
 
     const year = this.layout.calculateYearFromX(
-      x,
+      clickX,
       this.state.startYear(),
       this.state.endYear(),
-      this.state.layoutWidth()
+      effectiveWidth
     );
     this.state.setPersistentMarker(year);
   }
@@ -81,9 +85,5 @@ export class TimelineRulerComponent {
   clearPersistentMarker(event: Event) {
     event.stopPropagation();
     this.state.setPersistentMarker(null);
-  }
-
-  getTransform(x: number | null): string {
-    return x !== null ? `translateX(${x}px)` : '';
   }
 }

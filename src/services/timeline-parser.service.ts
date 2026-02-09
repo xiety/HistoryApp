@@ -6,6 +6,7 @@ export interface RawEvent {
   name: string;
   start: number;
   end: number;
+  lineNumber: number;
 }
 
 export interface SubcategoryData {
@@ -21,8 +22,15 @@ export interface CategoryData {
   subcategories: SubcategoryData[];
 }
 
+export interface CategoryInfo {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export interface TimelineData {
   categories: CategoryData[];
+  groupCategories: Map<number, CategoryInfo[]>;
   minYear: number;
   maxYear: number;
 }
@@ -58,6 +66,8 @@ export class TimelineParserService {
     this.groupIdCounter = 0;
 
     const categories: CategoryData[] = [];
+    const groupCategories = new Map<number, CategoryInfo[]>();
+
     let minYear = Infinity;
     let maxYear = -Infinity;
     let hasEvents = false;
@@ -89,7 +99,8 @@ export class TimelineParserService {
 
     const lines = text.split(/\r?\n/);
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const trimmed = line.trim();
       if (!trimmed) continue;
 
@@ -110,6 +121,22 @@ export class TimelineParserService {
         const groupId = ++this.groupIdCounter;
         hasEvents = true;
 
+        const groupInfos: CategoryInfo[] = [];
+        const seenCats = new Set<string>();
+
+        for (const target of currentTargets) {
+          if (!seenCats.has(target.category)) {
+            seenCats.add(target.category);
+            const cat = ensureCategory(target.category);
+            groupInfos.push({ id: cat.id, name: cat.name, color: cat.color });
+          }
+        }
+
+        if (groupInfos.length > 0) {
+          groupInfos.sort((a, b) => a.name.localeCompare(b.name));
+          groupCategories.set(groupId, groupInfos);
+        }
+
         for (const range of ranges) {
           if (range.start < minYear) minYear = range.start;
           if (range.end > maxYear) maxYear = range.end;
@@ -123,7 +150,8 @@ export class TimelineParserService {
               groupId,
               name,
               start: range.start,
-              end: range.end
+              end: range.end,
+              lineNumber: i
             });
           }
         }
@@ -141,6 +169,7 @@ export class TimelineParserService {
 
     return {
       categories,
+      groupCategories,
       minYear: hasEvents ? minYear : 0,
       maxYear: hasEvents ? maxYear : 0
     };

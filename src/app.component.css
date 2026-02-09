@@ -21,3 +21,39 @@
   gap: 2px;
   background-color: #e2e8f0;
 }
+
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+
+  :host {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .main-layout {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  app-timeline-controls,
+  app-timeline-sidebar,
+  app-timeline-mini-map {
+    display: none !important;
+  }
+
+  .workspace {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

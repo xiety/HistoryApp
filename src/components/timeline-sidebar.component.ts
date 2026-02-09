@@ -1,13 +1,21 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed, Type } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineEditorComponent } from './timeline-editor.component';
 import { TimelineTocComponent } from './timeline-toc.component';
+import { TimelineSetupComponent } from './timeline-setup.component';
 import { TimelineStateService } from '../services/timeline-state.service';
-import { TimelineUiStateService } from '../services/timeline-ui-state.service';
+import { TimelineUiStateService, SidebarTab } from '../services/timeline-ui-state.service';
+
+interface TabDefinition {
+  id: SidebarTab;
+  label: string;
+  component: Type<any>;
+}
 
 @Component({
   selector: 'app-timeline-sidebar',
-  imports: [CommonModule, TimelineEditorComponent, TimelineTocComponent],
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './timeline-sidebar.component.html',
   styleUrls: ['./timeline-sidebar.component.css']
 })
@@ -15,8 +23,15 @@ export class TimelineSidebarComponent {
   state = inject(TimelineStateService);
   ui = inject(TimelineUiStateService);
 
-  onScrollToCategory(id: number) {
-    this.state.requestScrollToCategory(id);
-    this.ui.setSidebarOpen(false);
-  }
+  readonly tabs: TabDefinition[] = [
+    { id: 'editor', label: 'Data', component: TimelineEditorComponent },
+    { id: 'toc', label: 'TOC', component: TimelineTocComponent },
+    { id: 'setup', label: 'Setup', component: TimelineSetupComponent }
+  ];
+
+  readonly activeComponent = computed(() => {
+    const activeId = this.ui.activeSidebarTab();
+    const tab = this.tabs.find(t => t.id === activeId);
+    return tab ? tab.component : TimelineEditorComponent;
+  });
 }

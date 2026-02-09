@@ -1,20 +1,25 @@
 import { Injectable, signal } from '@angular/core';
 
-export type SidebarTab = 'editor' | 'toc';
+export type SidebarTab = 'editor' | 'toc' | 'setup';
+export type SidebarMode = 'auto' | 'visible' | 'hidden';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TimelineUiStateService {
-  readonly isSidebarOpen = signal<boolean>(false);
+  readonly sidebarMode = signal<SidebarMode>('auto');
   readonly activeSidebarTab = signal<SidebarTab>('editor');
 
-  toggleSidebar() {
-    this.isSidebarOpen.update(v => !v);
+  showSidebar() {
+    this.sidebarMode.set('visible');
   }
 
-  setSidebarOpen(isOpen: boolean) {
-    this.isSidebarOpen.set(isOpen);
+  hideSidebar() {
+    this.sidebarMode.set('hidden');
+  }
+
+  resetSidebarToDefault() {
+    this.sidebarMode.set('auto');
   }
 
   setActiveTab(tab: SidebarTab) {

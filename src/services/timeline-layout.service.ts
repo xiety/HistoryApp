@@ -8,6 +8,10 @@ export interface RenderEvent {
   x: number;
   width: number;
   visualWidth: number;
+
+  xPct: number;
+  widthPct: number;
+
   row: number;
   displayMode: 'full' | 'overflow' | 'legend-full' | 'legend-overflow';
   clippedLeft: boolean;
@@ -24,6 +28,10 @@ export interface LegendItem {
   raw: RawEvent;
   x: number;
   width: number;
+
+  xPct: number;
+  widthPct: number;
+
   row: number;
   text: string;
 }
@@ -47,6 +55,7 @@ export interface CategoryLayout {
 
 export interface GridLine {
   x: number;
+  xPct: number;
   label: number;
 }
 
@@ -141,7 +150,11 @@ export class TimelineLayoutService {
     for (let year = firstTick; year <= end + epsilon; year += step) {
       const x = sidePadding + ((year - start) * pxPerYear);
       if (x > -renderMargin && x <= width + epsilon) {
-        lines.push({ x, label: year });
+        lines.push({
+          x,
+          xPct: (x / width) * 100,
+          label: year
+        });
       }
     }
     return lines;
@@ -151,7 +164,9 @@ export class TimelineLayoutService {
     events: RawEvent[],
     containerWidth: number,
     viewStartYear: number,
-    viewEndYear: number
+    viewEndYear: number,
+    showLegends: boolean,
+    compactMode: boolean
   ): Omit<SubcategoryLayout, 'id' | 'name'> {
 
     const candidates = this.generateCandidates(events, containerWidth, viewStartYear, viewEndYear);
@@ -160,9 +175,9 @@ export class TimelineLayoutService {
       return this.createEmptyLayout();
     }
 
-    const { rows, legendCandidates } = this.distributeEvents(candidates, containerWidth);
+    const { rows, legendCandidates } = this.distributeEvents(candidates, containerWidth, showLegends, compactMode);
 
-    const legendRows = this.generateLegendLayout(legendCandidates, rows);
+    const legendRows = this.generateLegendLayout(legendCandidates, rows, showLegends, containerWidth);
 
     this.postProcessVisuals(rows);
 
@@ -262,7 +277,7 @@ export class TimelineLayoutService {
     return { x, width: w, visualWidth, clippedLeft, clippedRight };
   }
 
-  private distributeEvents(candidates: LayoutCandidate[], containerWidth: number) {
+  private distributeEvents(candidates: LayoutCandidate[], containerWidth: number, showLegends: boolean, compactMode: boolean) {
     const rows: RenderEvent[][] = [];
     const legendCandidates: RenderEvent[] = [];
     const minEventGap = this.config.minEventGap();
@@ -270,12 +285,12 @@ export class TimelineLayoutService {
     const templateWidth = this.calculateLegendTemplateWidth(candidates.length);
 
     for (const candidate of candidates) {
-      const event = this.createRenderEvent(candidate);
+      const event = this.createRenderEvent(candidate, containerWidth);
       let placed = false;
 
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
-        if (this.tryPlaceInRow(event, row, minEventGap, templateWidth, legendCandidates)) {
+        if (this.tryPlaceInRow(event, row, minEventGap, templateWidth, legendCandidates, showLegends, compactMode)) {
           event.row = r;
           placed = true;
           break;
@@ -284,6 +299,9 @@ export class TimelineLayoutService {
 
       if (!placed) {
         event.row = rows.length;
+        if (!showLegends) {
+          event.displayMode = 'full';
+        }
         rows.push([event]);
       }
     }
@@ -304,36 +322,61 @@ export class TimelineLayoutService {
     row: RenderEvent[],
     minGap: number,
     templateWidth: number,
-    legendCandidates: RenderEvent[]
+    legendCandidates: RenderEvent[],
+    showLegends: boolean,
+    compactMode: boolean
   ): boolean {
     const last = row[row.length - 1];
+    const textPadding = this.config.textPadding();
 
     if (event.x < last.x + last.width + minGap - 0.001) {
       return false;
     }
 
     const spaceToNextEvent = event.x - last.x;
-
     last.safeWidth = spaceToNextEvent - minGap;
-    const textNeeded = last.nameWidth + this.config.textPadding();
 
-    if (textNeeded <= spaceToNextEvent) {
+    const textNeeded = last.nameWidth + textPadding;
+    const textFits = textNeeded <= spaceToNextEvent;
+
+    if (!compactMode) {
+      if (textFits) {
+        row.push(event);
+        return true;
+      }
+
+      if (showLegends) {
+        const legendNeeded = templateWidth;
+        const legendFits = legendNeeded <= spaceToNextEvent;
+
+        if (legendFits) {
+          if (last.legendId === 0) {
+            last.legendId = -1;
+            legendCandidates.push(last);
+          }
+          last.displayMode = templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
+          row.push(event);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (textFits) {
       row.push(event);
       return true;
     }
 
-    if (templateWidth <= spaceToNextEvent) {
+    if (showLegends) {
       if (last.legendId === 0) {
         last.legendId = -1;
         legendCandidates.push(last);
       }
-
       last.displayMode = templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
-      row.push(event);
-      return true;
     }
 
-    return false;
+    row.push(event);
+    return true;
   }
 
   private finalizeRowSafeWidths(rows: RenderEvent[][], containerWidth: number) {
@@ -348,7 +391,7 @@ export class TimelineLayoutService {
     }
   }
 
-  private createRenderEvent(candidate: LayoutCandidate): RenderEvent {
+  private createRenderEvent(candidate: LayoutCandidate, containerWidth: number): RenderEvent {
     const neededForFull = candidate.nameWidth + this.config.textPadding();
     const initialMode = (neededForFull <= candidate.visualWidth) ? 'full' : 'overflow';
 
@@ -358,6 +401,10 @@ export class TimelineLayoutService {
       x: candidate.x,
       width: candidate.width,
       visualWidth: candidate.visualWidth,
+
+      xPct: (candidate.x / containerWidth) * 100,
+      widthPct: (candidate.visualWidth / containerWidth) * 100,
+
       row: -1,
       displayMode: initialMode,
       clippedLeft: candidate.clippedLeft,
@@ -370,7 +417,11 @@ export class TimelineLayoutService {
     };
   }
 
-  private generateLegendLayout(legendCandidates: RenderEvent[], rows: RenderEvent[][]): LegendItem[][] {
+  private generateLegendLayout(legendCandidates: RenderEvent[], rows: RenderEvent[][], showLegends: boolean, containerWidth: number): LegendItem[][] {
+    if (!showLegends || legendCandidates.length === 0) {
+      return [];
+    }
+
     legendCandidates.sort((a, b) => {
       if (Math.abs(a.x - b.x) > 0.1) return a.x - b.x;
       return a.row - b.row;
@@ -386,11 +437,14 @@ export class TimelineLayoutService {
       for (const ev of row) {
         if (ev.legendId > 0) {
           const text = `${ev.legendId} ${ev.raw.name}`;
+          const w = this.getTextWidth(text);
           items.push({
             legendId: ev.legendId,
             raw: ev.raw,
             x: ev.x,
-            width: this.getTextWidth(text),
+            width: w,
+            xPct: (ev.x / containerWidth) * 100,
+            widthPct: (w / containerWidth) * 100,
             row: -1,
             text
           });
@@ -435,7 +489,7 @@ export class TimelineLayoutService {
 
     for (const row of rows) {
       for (const event of row) {
-        let contentWidth = paddingLeft + event.nameWidth;
+        let contentWidth = paddingLeft;
 
         if (event.legendId > 0) {
           const idStr = String(event.legendId);
@@ -443,14 +497,19 @@ export class TimelineLayoutService {
           contentWidth += idWidth + legendGap;
         }
 
+        contentWidth += event.nameWidth;
         event.contentWidth = contentWidth;
 
         event.needsMask = contentWidth > (event.safeWidth + 1);
 
-        const isBlocked = (event.safeWidth - event.visualWidth) < 2;
-        const hideBorder = event.clippedRight || (event.displayMode !== 'full' && !isBlocked);
+        const textOverflowsBar = contentWidth > (event.visualWidth + 1);
+        const hasFreeSpace = (event.safeWidth - event.visualWidth) > 2;
 
-        event.hasRightBorder = !hideBorder;
+        if (event.clippedRight || (textOverflowsBar && hasFreeSpace)) {
+          event.hasRightBorder = false;
+        } else {
+          event.hasRightBorder = true;
+        }
       }
     }
   }

@@ -1,9 +1,9 @@
 .ruler-bar {
   background: white;
   border-bottom: 1px solid #cbd5e1;
-  flex: none;
-  z-index: 20;
-  position: relative;
+  z-index: 130;
+  position: sticky;
+  top: 0;
 }
 
 .ruler-canvas {
@@ -13,12 +13,15 @@
   overflow: visible;
 }
 
+.fluid-ruler-container {
+  position: relative;
+  width: auto;
+  height: 100%;
+}
+
 .ruler-grid-layer {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   pointer-events: none;
 }
 
@@ -57,7 +60,7 @@
   min-width: 30px;
   text-align: center;
   pointer-events: none;
-  will-change: transform;
+  will-change: left;
   z-index: 30;
 }
 
@@ -67,7 +70,7 @@
   left: 0;
   transform-origin: left bottom;
   margin-left: 4px;
-  will-change: transform;
+  will-change: left;
   z-index: 25;
 
   background-color: #3b82f6;
@@ -76,7 +79,7 @@
   font-weight: bold;
   padding: 0.1em 0.4em;
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   cursor: pointer;
   display: flex;

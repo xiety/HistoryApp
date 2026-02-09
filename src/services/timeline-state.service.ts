@@ -1,6 +1,6 @@
-import { Injectable, computed, inject, signal, effect } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import { TimelineParserService, TimelineData, CategoryData, SubcategoryData, RawEvent } from './timeline-parser.service';
+import { TimelineParserService, TimelineData, CategoryData, SubcategoryData, RawEvent, CategoryInfo } from './timeline-parser.service';
 import { TimelineLayoutService, SubcategoryLayout } from './timeline-layout.service';
 import { TimelineConfigService } from './timeline-config.service';
 import { DATA_SOURCE_URL } from '../config/example-data';
@@ -37,39 +37,41 @@ export class TimelineStateService {
   private layout = inject(TimelineLayoutService);
   private config = inject(TimelineConfigService);
 
-  private readonly STORAGE_KEY = 'chronos-events-data';
-
   private readonly _scrollTo$ = new Subject<number>();
   readonly scrollTo$ = this._scrollTo$.asObservable();
+
 
   readonly inputText = signal<string>('');
   readonly isLoading = signal<boolean>(false);
 
   readonly containerWidth = signal<number>(1000);
+
   readonly startYear = signal<number>(this.config.defaultStartYear);
   readonly endYear = signal<number>(this.config.defaultEndYear);
 
   readonly activeCategoryId = signal<number | null>(null);
   readonly visibleCategoryIds = signal<Set<number>>(new Set());
+  readonly highlightedCategoryId = signal<number | null>(null);
+
   readonly hoveredYear = signal<number | null>(null);
   readonly persistentMarkerYear = signal<number | null>(null);
 
   readonly selectedEventId = signal<number | null>(null);
   readonly selectedGroupId = signal<number | null>(null);
+  readonly selectedEventLine = signal<number | null>(null);
+
   readonly hoveredEventId = signal<number | null>(null);
   readonly hoveredGroupId = signal<number | null>(null);
 
   readonly searchQuery = signal<string>('');
   readonly isFilterMode = signal<boolean>(false);
   readonly hideSmallEvents = signal<boolean>(false);
+  readonly showLegends = signal<boolean>(true);
+  readonly compactMode = signal<boolean>(false);
   readonly hiddenCategoryIds = signal<Set<number>>(new Set());
   readonly onlyShowVisibleInToc = signal<boolean>(false);
 
   readonly tocFilterQuery = signal<string>('');
-
-  constructor() {
-    this.initPersistence();
-  }
 
   readonly parsedData = computed(() => this.parser.parse(this.inputText()));
 
@@ -102,7 +104,7 @@ export class TimelineStateService {
         ...sub,
         events: sub.events.filter(evt => {
           const dur = Math.max(1, evt.end - evt.start);
-          return (dur * ppy) >= 1;
+          return (dur * ppy) >= 2;
         })
       }))
     }));
@@ -198,19 +200,21 @@ export class TimelineStateService {
       if (subcategories.length > 0) categories.push({ ...cat, subcategories });
     }
     return { ...data, categories };
-  }
+  };
 
   readonly processedLayout = computed(() => {
     const data = this.renderableData();
     const width = this.layoutWidth();
     const start = this.startYear();
     const end = this.endYear();
+    const showLegends = this.showLegends();
+    const compactMode = this.compactMode();
 
     return data.categories.flatMap(cat => {
       const sublayouts: SubcategoryLayout[] = [];
 
       for (const sub of cat.subcategories) {
-        const res = this.layout.computeLayout(sub.events, width, start, end);
+        const res = this.layout.computeLayout(sub.events, width, start, end, showLegends, compactMode);
         if (res.rowCount > 0) {
           sublayouts.push({ id: sub.id, name: sub.name, ...res });
         }
@@ -400,13 +404,19 @@ export class TimelineStateService {
     });
   });
 
+  getGroupCategories(groupId: number): CategoryInfo[] {
+    return this.activeData().groupCategories.get(groupId) || [];
+  }
+
   setText(text: string) {
     this.inputText.set(text);
     this.clearEventSelection();
   }
 
   setRange(start: number, end: number) { this.startYear.set(start); this.endYear.set(end); }
+
   setContainerWidth(width: number) { this.containerWidth.set(width); }
+
   setActiveCategory(id: number | null) { this.activeCategoryId.set(id); }
   setTocFilterQuery(query: string) { this.tocFilterQuery.set(query); }
 
@@ -427,12 +437,14 @@ export class TimelineStateService {
     } else {
       this.selectedEventId.set(raw.id);
       this.selectedGroupId.set(raw.groupId);
+      this.selectedEventLine.set(raw.lineNumber);
     }
   }
 
   clearEventSelection() {
     this.selectedEventId.set(null);
     this.selectedGroupId.set(null);
+    this.selectedEventLine.set(null);
   }
 
   setHoveredEvent(raw: RawEvent | null) {
@@ -488,6 +500,11 @@ export class TimelineStateService {
 
   requestScrollToCategory(id: number) {
     this._scrollTo$.next(id);
+    this.highlightedCategoryId.set(id);
+  }
+
+  clearHighlight() {
+    this.highlightedCategoryId.set(null);
   }
 
   async loadFromUrl() {
@@ -500,13 +517,5 @@ export class TimelineStateService {
       this.endYear.set(this.config.defaultEndYear);
     } catch (e) { console.error(e); }
     finally { this.isLoading.set(false); }
-  }
-
-  private initPersistence() {
-    const saved = localStorage.getItem(this.STORAGE_KEY);
-    if (saved?.trim()) this.inputText.set(saved);
-    else this.loadFromUrl();
-
-    effect(() => localStorage.setItem(this.STORAGE_KEY, this.inputText()));
   }
 }

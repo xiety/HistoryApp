@@ -1,9 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
-/**
- * Pure utility function to format a year number.
- * Handles negative numbers as BCE.
- */
 export function formatYear(year: number | null | undefined): string {
   if (year === null || year === undefined) return '';
 

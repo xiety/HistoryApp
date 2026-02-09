@@ -1,121 +1,42 @@
-<div class="timeline-layout-area" [style.width.px]="state.layoutWidth()" [style.font-size.px]="config.baseFontSize()"
+<div class="timeline-layout-area" style="width: 100%;" [style.font-size.px]="config.baseFontSize()"
   (click)="clearSelection()">
 
-  <div class="grid-lines-layer">
-    @for (line of state.gridLines(); track line.label) {
-    <div class="grid-line-vertical" [style.left.px]="line.x"></div>
-    }
-  </div>
+  <div class="fluid-timeline-container" [style.margin-right.px]="config.viewPaddingRight()"
+    [style.padding-bottom.px]="config.viewPaddingBottom()">
 
-  @for (category of state.processedLayout(); track category.id) {
-  <section class="category-group" [style.--category-color]="category.color">
+    <app-timeline-grid [lines]="state.gridLines()"></app-timeline-grid>
 
-    <div class="category-header" [style.height.px]="config.categoryHeaderHeight()"
-      [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
-      <h2 class="category-badge">
-        {{ category.name }}
-      </h2>
-    </div>
+    @for (category of state.processedLayout(); track category.id) {
+    <section class="category-group" [style.--category-color]="category.color">
 
-    @for (sub of category.subcategories; track sub.id) {
-    <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
-      [style.padding-bottom.px]="config.subcategoryMarginBottom()">
-
-      @if (sub.name) {
-      <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
-      }
-
-      <div class="events-track" [style.height.px]="sub.height">
-
-        @if (sub.legendRows.length > 0) {
-        <div class="legend-background" [style.top.px]="getLegendBackgroundTop(sub)" [style.bottom.px]="0"></div>
-        }
-
-        @for (row of sub.rows; track $index) {
-        @for (event of row; track event.raw.id) {
-        @let isActive = isInstanceActive(event.raw.id);
-
-        <div class="event-rect" [style.left.px]="event.x" [style.width.px]="event.visualWidth"
-          [style.top.px]="getEventTop(event.row)" [style.height.px]="config.rowHeight()"
-          [class.selected]="isGroupActive(event.raw.groupId)" [class.linked]="isGroupActive(event.raw.groupId)"
-          [class.instance-active]="isActive" [class.is-dimmed]="isDimmed(event.raw.id)"
-          [title]="getTooltipText(event.raw)" (click)="toggleSelection(event.raw, $event)"
-          (mouseenter)="setHovered(event.raw)" (mouseleave)="clearHovered()">
-
-          <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
-            [class.no-border-right]="!event.hasRightBorder">
-          </div>
-
-          <div class="event-label label-base" [class.is-active]="isActive" [class.is-legend-full]="isLegendFull(event)"
-            [style.maxWidth.px]="isActive ? null : event.safeWidth"
-            [style.background-image]="isActive ? 'linear-gradient(to right, transparent ' + event.visualWidth + 'px, #fff ' + event.visualWidth + 'px)' : null">
-            @if (hasLegend(event)) {
-            <span class="legend-id">{{ event.legendId }}</span>
-            }
-            @if (shouldShowName(event)) {
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
-            }
-          </div>
-
-          <div class="event-label label-mask" [class.is-legend-full]="isLegendFull(event)" aria-hidden="true">
-            @if (hasLegend(event)) {
-            <span class="legend-id">{{ event.legendId }}</span>
-            }
-            @if (shouldShowName(event)) {
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
-            }
-          </div>
-
-          @if (isActive) {
-          <ng-container *ngTemplateOutlet="dateTags; context: { raw: event.raw }"></ng-container>
-          }
-        </div>
-        }
-        }
-
-        @for (row of sub.legendRows; track $index) {
-        @for (item of row; track item.legendId) {
-
-        <div class="legend-item" [style.left.px]="item.x" [style.top.px]="getLegendItemTop(sub, item.row)"
-          [style.height.px]="config.legendRowHeight()" [class.selected]="isInstanceActive(item.raw.id)"
-          [class.linked]="isInstanceActive(item.raw.id)" [class.is-dimmed]="isDimmed(item.raw.id)"
-          [title]="getTooltipText(item.raw)" (click)="toggleSelection(item.raw, $event)"
-          (mouseenter)="setHovered(item.raw)" (mouseleave)="clearHovered()">
-          {{ item.text }}
-
-          @if (isInstanceActive(item.raw.id)) {
-          <ng-container *ngTemplateOutlet="dateTags; context: { raw: item.raw }"></ng-container>
-          }
-        </div>
-        }
-        }
+      <div class="category-header" [class.is-highlighted]="state.highlightedCategoryId() === category.id"
+        (animationend)="state.clearHighlight()" [style.height.px]="config.categoryHeaderHeight()"
+        [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
+        <h2 class="category-badge">
+          {{ category.name }}
+        </h2>
       </div>
 
+      @for (sub of category.subcategories; track sub.id) {
+      <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
+        [class.no-legend]="sub.legendRows.length === 0" [style.padding-bottom.px]="config.subcategoryMarginBottom()">
+
+        @if (sub.name) {
+        <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
+        }
+
+        <app-timeline-track [trackData]="sub" [categoryId]="category.id"></app-timeline-track>
+
+      </div>
+      }
+    </section>
+    }
+
+    @if (state.processedLayout().length === 0) {
+    <div class="empty-message">
+      <p>No events found in this range.</p>
     </div>
     }
-  </section>
-  }
 
-  @if (state.processedLayout().length === 0) {
-  <div class="empty-message">
-    <p>No events found in this range.</p>
   </div>
-  }
-
-  <div class="border-lines-layer">
-    <div class="grid-line-solid" style="left: 0px;"></div>
-    <div class="grid-line-solid" [style.left.px]="getRightBorderX()"></div>
-  </div>
-
-  <ng-template #dateTags let-raw="raw">
-    <div class="date-tag start-tag" [class.out-of-bounds]="isOutOfBounds(raw.start, 'start')">
-      {{ raw.start | yearFormat }}
-    </div>
-
-    @if (raw.end !== raw.start) {
-    <div class="date-tag end-tag" [class.out-of-bounds]="isOutOfBounds(raw.end, 'end')">
-      {{ raw.end | yearFormat }}
-    </div>
-    }
-  </ng-template>
 </div>
