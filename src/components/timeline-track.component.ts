@@ -26,7 +26,8 @@ export class TimelineTrackComponent {
     this.state.toggleEventSelection(raw);
   }
 
-  setHovered(raw: RawEvent) {
+  setHovered(raw: RawEvent, event: MouseEvent) {
+    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
     this.state.setHoveredEvent(raw);
   }
 
@@ -34,10 +35,34 @@ export class TimelineTrackComponent {
     this.state.setHoveredEvent(null);
   }
 
-  isDimmed(eventId: number): boolean {
+  isDimmed(raw: RawEvent): boolean {
     if (!this.state.searchQuery()) return false;
     if (this.state.isFilterMode()) return false;
-    return !this.state.matchingEventIds()?.has(eventId);
+    return !this.state.matchingEventIds()?.has(raw.id);
+  }
+
+  isHovered(raw: RawEvent): boolean {
+    return this.state.hoveredGroupId() === raw.groupId;
+  }
+
+  isSelected(raw: RawEvent): boolean {
+    return this.state.selectedGroupId() === raw.groupId;
+  }
+
+  shouldShowActive(raw: RawEvent): boolean {
+    const isExactHover = this.state.hoveredEventId() === raw.id;
+    const isExactSelection = this.state.selectedEventId() === raw.id;
+
+    if (this.state.isHoverDetailsSuppressed()) {
+      return isExactSelection;
+    }
+
+    return isExactHover || isExactSelection;
+  }
+
+  hasDotsOverflow(relatedCount: number, visualWidth: number): boolean {
+    const DOT_WIDTH = 8;
+    return (relatedCount * DOT_WIDTH) > visualWidth;
   }
 
   getRelatedCategories(groupId: number): CategoryInfo[] {
@@ -64,14 +89,6 @@ export class TimelineTrackComponent {
 
   getLegendItemTop(row: number): number {
     return this.trackData().legendStartY + (row * this.config.legendRowHeight());
-  }
-
-  isInstanceActive(id: number): boolean {
-    return this.state.hoveredEventId() === id || this.state.selectedEventId() === id;
-  }
-
-  isGroupActive(groupId: number): boolean {
-    return this.state.hoveredGroupId() === groupId || this.state.selectedGroupId() === groupId;
   }
 
   isLegendFull(event: RenderEvent): boolean {

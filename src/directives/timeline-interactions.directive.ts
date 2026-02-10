@@ -35,6 +35,8 @@ export class TimelineInteractionsDirective {
   private prevPinchDiff = -1;
 
   handleWheel(event: WheelEvent): void {
+    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
+
     if (event.ctrlKey || event.metaKey) {
       this.handleZoom(event);
       return;
@@ -81,6 +83,8 @@ export class TimelineInteractionsDirective {
   }
 
   handlePointerMove(event: PointerEvent): void {
+    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
+
     if (event.pointerType === 'mouse') {
       const rect = this.elementRef.nativeElement.getBoundingClientRect();
       const x = event.clientX - rect.left;

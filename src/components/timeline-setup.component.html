@@ -17,6 +17,10 @@
     (valueChange)="state.showLegends.set($event)">
   </app-setting-toggle>
 
+  <app-setting-toggle label="Show Related Categories" description="Show dots for events in multiple categories"
+    [value]="state.showRelatedDots()" (valueChange)="state.showRelatedDots.set($event)">
+  </app-setting-toggle>
+
   <app-setting-toggle label="Compact Mode" description="Allow text overflow & clipping" [value]="state.compactMode()"
     (valueChange)="state.compactMode.set($event)">
   </app-setting-toggle>

@@ -41,7 +41,7 @@
     z-index: 110;
   }
 
-  &:hover,
+  &.is-hovered,
   &.selected {
     z-index: 105;
 
@@ -173,7 +173,7 @@
     filter: grayscale(100%);
   }
 
-  &:hover,
+  &.is-hovered,
   &.selected {
     z-index: 105;
     text-decoration: none;
@@ -220,7 +220,6 @@
   top: 100%;
   left: 0;
   transform: translateY(2.0em);
-
   display: flex;
   flex-wrap: nowrap;
   gap: 4px;
@@ -237,4 +236,24 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.related-dots {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  transform: translateY(50%);
+  display: flex;
+  gap: 3px;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.related-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+  flex: none;
 }

@@ -32,6 +32,7 @@ export class TimelinePersistenceService {
     const prefs = this.load<any>(this.KEY_PREFS) || {};
     this.apply(prefs, 'hideSmallEvents', this.state.hideSmallEvents);
     this.apply(prefs, 'showLegends', this.state.showLegends);
+    this.apply(prefs, 'showRelatedDots', this.state.showRelatedDots);
     this.apply(prefs, 'compactMode', this.state.compactMode);
     this.apply(prefs, 'isFilterMode', this.state.isFilterMode);
     this.apply(prefs, 'baseFontSize', this.config.baseFontSize);
@@ -55,6 +56,7 @@ export class TimelinePersistenceService {
       this.save(this.KEY_PREFS, {
         hideSmallEvents: this.state.hideSmallEvents(),
         showLegends: this.state.showLegends(),
+        showRelatedDots: this.state.showRelatedDots(),
         compactMode: this.state.compactMode(),
         isFilterMode: this.state.isFilterMode(),
         baseFontSize: this.config.baseFontSize()

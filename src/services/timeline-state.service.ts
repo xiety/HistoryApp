@@ -66,10 +66,13 @@ export class TimelineStateService {
   readonly searchQuery = signal<string>('');
   readonly isFilterMode = signal<boolean>(false);
   readonly hideSmallEvents = signal<boolean>(false);
-  readonly showLegends = signal<boolean>(true);
+  readonly showLegends = signal<boolean>(false);
+  readonly showRelatedDots = signal<boolean>(true);
   readonly compactMode = signal<boolean>(false);
   readonly hiddenCategoryIds = signal<Set<number>>(new Set());
   readonly onlyShowVisibleInToc = signal<boolean>(false);
+
+  readonly isHoverDetailsSuppressed = signal<boolean>(false);
 
   readonly tocFilterQuery = signal<string>('');
 

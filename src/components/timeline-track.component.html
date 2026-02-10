@@ -6,36 +6,52 @@
 
     @for (row of trackData().rows; track $index) {
     @for (event of row; track event.raw.id) {
-    @let isActive = isInstanceActive(event.raw.id);
 
     <div class="event-rect" [style.left.%]="event.xPct" [style.width.%]="event.widthPct"
         [style.top.px]="getEventTop(event.row)" [style.height.px]="config.rowHeight()"
-        [class.selected]="isGroupActive(event.raw.groupId)" [class.instance-active]="isActive"
-        [class.is-dimmed]="isDimmed(event.raw.id)" [title]="getTooltipText(event.raw)"
-        (click)="toggleSelection(event.raw, $event)" (mouseenter)="setHovered(event.raw)" (mouseleave)="clearHovered()">
+        [class.selected]="isSelected(event.raw)" [class.is-hovered]="isHovered(event.raw)"
+        [class.instance-active]="shouldShowActive(event.raw)" [class.is-dimmed]="isDimmed(event.raw)"
+        [title]="getTooltipText(event.raw)" (click)="toggleSelection(event.raw, $event)"
+        (mouseenter)="setHovered(event.raw, $event)" (mouseleave)="clearHovered()">
 
         <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
             [class.no-border-right]="!event.hasRightBorder">
         </div>
 
-        <div class="event-label label-base" [class.is-active]="isActive" [class.is-legend-full]="isLegendFull(event)"
-            [style.maxWidth.px]="isActive ? null : event.safeWidth"
-            [style.background-image]="isActive ? 'linear-gradient(to right, transparent ' + event.visualWidth + 'px, #fff ' + event.visualWidth + 'px)' : null">
+        <div class="event-label label-base" [class.is-active]="shouldShowActive(event.raw)"
+            [class.is-legend-full]="isLegendFull(event)"
+            [style.maxWidth.px]="shouldShowActive(event.raw) ? null : event.safeWidth"
+            [style.background-image]="shouldShowActive(event.raw) ? 'linear-gradient(to right, transparent ' + event.visualWidth + 'px, #fff ' + event.visualWidth + 'px)' : null">
 
             @if (hasLegend(event)) {
             <span class="legend-id">{{ event.legendId }}</span>
             }
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
+            <span class="event-text" [class.text-fade-mask]="event.needsMask && !shouldShowActive(event.raw)">{{
+                event.raw.name }}</span>
         </div>
 
         <div class="event-label label-mask" [class.is-legend-full]="isLegendFull(event)" aria-hidden="true">
             @if (hasLegend(event)) {
             <span class="legend-id">{{ event.legendId }}</span>
             }
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">{{ event.raw.name }}</span>
+            <span class="event-text" [class.text-fade-mask]="event.needsMask && !shouldShowActive(event.raw)">{{
+                event.raw.name }}</span>
         </div>
 
-        @if (isActive) {
+        @if (state.showRelatedDots()) {
+        @let related = getRelatedCategories(event.raw.groupId);
+        @if (related.length > 0) {
+        <div class="related-dots" [style.maxWidth.px]="shouldShowActive(event.raw) ? null : event.safeWidth"
+            [class.text-fade-mask]="hasDotsOverflow(related.length, event.safeWidth) && !shouldShowActive(event.raw)">
+            @for (cat of related; track cat.id) {
+            <div class="related-dot" [style.background-color]="'hsl(' + cat.color + ')'"
+                [title]="'Also in: ' + cat.name"></div>
+            }
+        </div>
+        }
+        }
+
+        @if (shouldShowActive(event.raw)) {
         @let related = getRelatedCategories(event.raw.groupId);
         @if (related.length > 0) {
         <div class="category-tag-container">
@@ -54,13 +70,15 @@
 
     @for (row of trackData().legendRows; track $index) {
     @for (item of row; track item.legendId) {
+
     <div class="legend-item" [style.left.%]="item.xPct" [style.top.px]="getLegendItemTop(item.row)"
-        [style.height.px]="config.legendRowHeight()" [class.selected]="isInstanceActive(item.raw.id)"
-        [class.is-dimmed]="isDimmed(item.raw.id)" [title]="getTooltipText(item.raw)"
-        (click)="toggleSelection(item.raw, $event)" (mouseenter)="setHovered(item.raw)" (mouseleave)="clearHovered()">
+        [style.height.px]="config.legendRowHeight()" [class.selected]="isSelected(item.raw)"
+        [class.is-hovered]="isHovered(item.raw)" [class.is-dimmed]="isDimmed(item.raw)"
+        [title]="getTooltipText(item.raw)" (click)="toggleSelection(item.raw, $event)"
+        (mouseenter)="setHovered(item.raw, $event)" (mouseleave)="clearHovered()">
         {{ item.text }}
 
-        @if (isInstanceActive(item.raw.id)) {
+        @if (shouldShowActive(item.raw)) {
         @let related = getRelatedCategories(item.raw.groupId);
         @if (related.length > 0) {
         <div class="category-tag-container">
