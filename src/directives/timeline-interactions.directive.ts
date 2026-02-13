@@ -1,300 +1,295 @@
-import { Directive, ElementRef, inject, signal, input, ChangeDetectorRef } from '@angular/core';
+import { Directive, ElementRef, inject, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService } from '../services/timeline-layout.service';
-import { ScrollSyncService, ScrollAnchor } from '../services/scroll-sync.service';
+import { TimelineWorkspaceComponent } from '../components/timeline-workspace.component';
 
 @Directive({
   selector: '[appTimelineInteractions]',
   standalone: true,
   host: {
-    '(wheel)': 'handleWheel($event)',
-    '(pointerdown)': 'handlePointerDown($event)',
-    '(pointermove)': 'handlePointerMove($event)',
-    '(pointerup)': 'handlePointerUp($event)',
-    '(pointercancel)': 'handlePointerUp($event)',
-    '(lostpointercapture)': 'handlePointerUp($event)',
-    '(pointerleave)': 'handlePointerLeave($event)'
+    '(wheel)': 'onWheel($event)',
+    '(pointerdown)': 'onPointerDown($event)',
+    '(pointermove)': 'onPointerMove($event)',
+    '(pointerup)': 'onPointerUp($event)',
+    '(pointercancel)': 'onPointerUp($event)',
+    '(lostpointercapture)': 'onPointerUp($event)',
+    '(pointerleave)': 'onPointerLeave($event)'
   }
 })
 export class TimelineInteractionsDirective {
-  scrollContainer = input<HTMLElement | null>(null);
-
-  private elementRef = inject(ElementRef<HTMLElement>);
+  private el = inject(ElementRef<HTMLElement>);
   private state = inject(TimelineStateService);
   private layout = inject(TimelineLayoutService);
-  private scrollSync = inject(ScrollSyncService);
-  private cdr = inject(ChangeDetectorRef);
+  private workspace = inject(TimelineWorkspaceComponent);
 
-  readonly isDragging = signal(false);
+  scrollContainer = input<HTMLElement | null>(null);
 
-  private dragStartX = 0;
-  private dragStartYear = 0;
-  private dragEndYear = 0;
-  private dragAnchor: ScrollAnchor | null = null;
-  private evCache: PointerEvent[] = [];
-  private prevPinchDiff = -1;
+  private activePointers = new Map<number, PointerEvent>();
+  private readonly wheelActivity$ = new Subject<void>();
 
-  handleWheel(event: WheelEvent): void {
-    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
+  private lastPinchDist = -1;
 
-    if (event.ctrlKey || event.metaKey) {
-      this.handleZoom(event);
+  private dragStart = { x: 0, y: 0, yearStart: 0, yearEnd: 0 };
+  private isDragging = false;
+  private hasMoved = false;
+
+  constructor() {
+    this.wheelActivity$.pipe(
+      debounceTime(200),
+      takeUntilDestroyed()
+    ).subscribe(() => {
+      if (this.activePointers.size === 0) {
+        this.state.isUserInteracting.set(false);
+      }
+    });
+  }
+
+  onWheel(event: WheelEvent): void {
+    const isZoom = event.ctrlKey || event.metaKey;
+
+    this.state.isHoverDetailsSuppressed.set(isZoom);
+    this.state.isUserInteracting.set(true);
+    this.wheelActivity$.next();
+
+    if (isZoom) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.handleZoomWheel(event);
       return;
     }
 
-    if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-      this.handlePan(event);
-      return;
+    let deltaX = event.deltaX;
+    let deltaY = event.deltaY;
+
+    if (event.shiftKey && deltaX === 0 && Math.abs(deltaY) > 0) {
+      deltaX = deltaY;
+      deltaY = 0;
+    }
+
+    const isHorizontalPan = Math.abs(deltaX) > Math.abs(deltaY);
+
+    if (isHorizontalPan) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const container = this.scrollContainer();
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const relativeY = event.clientY - rect.top;
+        this.workspace.setAnchorAtRelativeY(relativeY);
+      }
+
+      this.applyPan(deltaX);
+    } else {
     }
   }
 
-  handlePointerDown(event: PointerEvent): void {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
+  onPointerDown(event: PointerEvent): void {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
 
-    const scrollEl = this.scrollContainer();
-    if (scrollEl && event.target === scrollEl) {
-      const rect = scrollEl.getBoundingClientRect();
-      if (event.clientX >= rect.right - (scrollEl.offsetWidth - scrollEl.clientWidth)) return;
-      if (event.clientY >= rect.bottom - (scrollEl.offsetHeight - scrollEl.clientHeight)) return;
-    }
+    if (this.isScrollbarInteraction(event)) return;
+
+    this.el.nativeElement.setPointerCapture(event.pointerId);
+    this.activePointers.set(event.pointerId, event);
+
+    this.state.isUserInteracting.set(true);
 
     if (event.pointerType !== 'mouse') {
       this.state.setHoveredYear(null);
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-
-    const target = event.target as HTMLElement;
-    target.setPointerCapture(event.pointerId);
-
-    const existingIndex = this.evCache.findIndex(p => p.pointerId === event.pointerId);
-    if (existingIndex > -1) {
-      this.evCache[existingIndex] = event;
-    } else {
-      this.evCache.push(event);
-    }
-
-    if (this.evCache.length === 1) {
-      this.startDrag(event.clientX, event.clientY);
-    } else if (this.evCache.length === 2) {
-      this.prevPinchDiff = this.getPinchDistance();
+    if (this.activePointers.size === 1) {
+      this.beginDrag(event);
+    } else if (this.activePointers.size === 2) {
+      this.beginPinch();
     }
   }
 
-  handlePointerMove(event: PointerEvent): void {
+  onPointerMove(event: PointerEvent): void {
     this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
 
     if (event.pointerType === 'mouse') {
-      const rect = this.elementRef.nativeElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      this.updateHoverYear(x);
+      this.updateHoverYear(event.clientX);
     }
 
-    const index = this.evCache.findIndex(cached => cached.pointerId === event.pointerId);
-    if (index === -1) return;
+    if (this.activePointers.has(event.pointerId)) {
+      this.activePointers.set(event.pointerId, event);
+    }
 
-    this.evCache[index] = event;
-    event.preventDefault();
-    event.stopPropagation();
+    if (!this.hasMoved) {
+      const dist = Math.hypot(event.clientX - this.dragStart.x, event.clientY - this.dragStart.y);
+      if (dist > 5) {
+        this.hasMoved = true;
+      }
+    }
 
-    if (this.evCache.length === 2) {
-      this.handlePinchZoom(event.clientY);
-    } else if (this.evCache.length === 1) {
-      this.updateDrag(event.clientX, event.clientY);
+    if (this.activePointers.size === 2) {
+      this.updatePinch();
+    } else if (this.activePointers.size === 1 && this.isDragging) {
+      this.updateDrag(event);
     }
   }
 
-  handlePointerUp(event: PointerEvent): void {
-    this.removePointer(event);
+  onPointerUp(event: PointerEvent): void {
+    if (!this.activePointers.has(event.pointerId)) return;
 
-    if (this.evCache.length === 1) {
-      const remaining = this.evCache[0];
-      this.startDrag(remaining.clientX, remaining.clientY);
-      this.prevPinchDiff = -1;
-    } else if (this.evCache.length === 0) {
+    this.activePointers.delete(event.pointerId);
+
+    if (this.el.nativeElement.hasPointerCapture(event.pointerId)) {
+      this.el.nativeElement.releasePointerCapture(event.pointerId);
+    }
+
+    if (this.activePointers.size === 0) {
+      if (event.pointerType !== 'mouse' && !this.hasMoved) {
+        this.updateHoverYear(event.clientX);
+      }
+
       this.endDrag();
-      this.prevPinchDiff = -1;
+      this.state.isUserInteracting.set(false);
+    } else if (this.activePointers.size === 1) {
+      const remaining = this.activePointers.values().next().value;
+      if (remaining) this.beginDrag(remaining);
+      this.lastPinchDist = -1;
     }
   }
 
-  handlePointerLeave(event: PointerEvent): void {
+  onPointerLeave(event: PointerEvent): void {
     if (event.pointerType === 'mouse') {
       this.state.setHoveredYear(null);
     }
   }
 
-  private startDrag(clientX: number, clientY: number): void {
-    this.isDragging.set(true);
-    this.dragStartX = clientX;
-    this.dragStartYear = this.state.startYear();
-    this.dragEndYear = this.state.endYear();
+  private handleZoomWheel(event: WheelEvent) {
+    const rect = this.el.nativeElement.getBoundingClientRect();
+    const relativeX = event.clientX - rect.left;
 
-    const scrollEl = this.scrollContainer();
-    if (scrollEl) {
-      const rect = scrollEl.getBoundingClientRect();
-      const absoluteY = scrollEl.scrollTop + (clientY - rect.top);
-      this.dragAnchor = this.scrollSync.findScrollAnchor(absoluteY, this.state.processedLayout());
-    }
+    const delta = Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 100);
+
+    this.applyZoom(relativeX, delta);
   }
 
-  private updateDrag(clientX: number, clientY: number): void {
-    if (!this.isDragging() || !this.dragAnchor) return;
+  private beginDrag(event: PointerEvent) {
+    this.isDragging = true;
+    this.hasMoved = false;
+    this.dragStart = {
+      x: event.clientX,
+      y: event.clientY,
+      yearStart: this.state.startYear(),
+      yearEnd: this.state.endYear()
+    };
 
-    const deltaPixels = this.dragStartX - clientX;
-    this.applyPan(deltaPixels);
+    const container = this.scrollContainer();
+    const startY = container ? (event.clientY - container.getBoundingClientRect().top) : 0;
+    this.workspace.startDrag(startY);
+  }
 
-    this.cdr.detectChanges();
-    const scrollEl = this.scrollContainer();
-    if (scrollEl) {
-      const rect = scrollEl.getBoundingClientRect();
-      const mouseInScrollFrame = clientY - rect.top;
-      const newY = this.scrollSync.resolveAnchorY(this.dragAnchor, this.state.processedLayout());
-      if (newY !== null) {
-        scrollEl.scrollTop = Math.max(0, newY - mouseInScrollFrame);
+  private updateDrag(event: PointerEvent) {
+    if (!this.isDragging) return;
+
+    const deltaX = this.dragStart.x - event.clientX;
+    const pxPerYear = this.state.pixelsPerYear();
+
+    if (pxPerYear > 0) {
+      const yearDelta = deltaX / pxPerYear;
+      this.state.setRange(
+        this.dragStart.yearStart + yearDelta,
+        this.dragStart.yearEnd + yearDelta
+      );
+    }
+
+    const deltaY = event.clientY - this.dragStart.y;
+    this.workspace.updateDrag(deltaY);
+  }
+
+  private endDrag() {
+    this.isDragging = false;
+    this.workspace.endDrag();
+    this.lastPinchDist = -1;
+  }
+
+  private beginPinch() {
+    this.isDragging = false;
+    this.hasMoved = true;
+    this.lastPinchDist = this.getPinchDistance();
+  }
+
+  private updatePinch() {
+    const currentDist = this.getPinchDistance();
+    if (this.lastPinchDist > 0 && currentDist > 0) {
+      const delta = this.lastPinchDist - currentDist;
+
+      const pointers = Array.from(this.activePointers.values());
+      const centerX = (pointers[0].clientX + pointers[1].clientX) / 2;
+      const rect = this.el.nativeElement.getBoundingClientRect();
+      const relativeX = centerX - rect.left;
+
+      if (Math.abs(delta) > 2) {
+        this.applyZoom(relativeX, delta * 2.5);
+        this.lastPinchDist = currentDist;
       }
     }
   }
 
-  private endDrag(): void {
-    this.isDragging.set(false);
-    this.dragAnchor = null;
-  }
-
-  private handleZoom(event: WheelEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const rect = this.elementRef.nativeElement.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-
-    const result = this.calculateZoomState(
-      mouseX,
-      event.deltaY
-    );
-
-    if (result) {
-      this.applyRangeChange(result.start, result.end, event.clientY);
-    }
-  }
-
-  private handlePan(event: WheelEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    let deltaPixels = event.deltaX;
-    if (deltaPixels === 0 && event.shiftKey) {
-      deltaPixels = event.deltaY;
-    }
-
-    this.applyPan(deltaPixels);
-  }
-
-  private applyPan(deltaPixels: number): void {
+  private applyPan(deltaPx: number) {
     const pxPerYear = this.state.pixelsPerYear();
     if (pxPerYear <= 0) return;
 
-    const yearDelta = deltaPixels / pxPerYear;
-
-    const start = this.dragStartYear || this.state.startYear();
-    const end = this.dragEndYear || this.state.endYear();
-
-    let newStart = start + yearDelta;
-    let newEnd = end + yearDelta;
-
-    this.state.setRange(newStart, newEnd);
+    const yearDelta = deltaPx / pxPerYear;
+    this.state.setRange(
+      this.state.startYear() + yearDelta,
+      this.state.endYear() + yearDelta
+    );
   }
 
-  private calculateZoomState(pivotX: number, delta: number): { start: number, end: number; } | null {
-    const currentStart = this.state.startYear();
-    const currentEnd = this.state.endYear();
-    const containerWidth = this.state.layoutWidth();
+  private applyZoom(pivotX: number, delta: number) {
+    const start = this.state.startYear();
+    const end = this.state.endYear();
+    const span = end - start;
 
-    const span = currentEnd - currentStart;
+    if (span < 0.01 && delta < 0) return;
+    if (span > 100000 && delta > 0) return;
 
-    if (span <= 0.001 && delta < 0) return null;
-    if (span >= Number.MAX_SAFE_INTEGER / 2 && delta > 0) return null;
-
+    const width = this.state.layoutWidth();
     const sidePadding = this.layout.getSidePadding();
-    const effectiveWidth = Math.max(1, containerWidth - (2 * sidePadding));
-    const relativePivot = pivotX - sidePadding;
-    const mouseRatio = Math.max(0, Math.min(1, relativePivot / effectiveWidth));
-    const yearUnderMouse = currentStart + (span * mouseRatio);
+    const effectiveW = Math.max(1, width - (2 * sidePadding));
 
-    const zoomFactor = delta > 0 ? 1.05 : 0.95;
-    const newSpan = span * zoomFactor;
+    const ratio = Math.max(0, Math.min(1, (pivotX - sidePadding) / effectiveW));
+    const pivotYear = start + (span * ratio);
 
-    let newStart = yearUnderMouse - (newSpan * mouseRatio);
-    let newEnd = newStart + newSpan;
+    const factor = 1 + (delta * 0.001);
+    const newSpan = span * factor;
 
-    return { start: newStart, end: newEnd };
+    this.state.setRange(
+      pivotYear - (newSpan * ratio),
+      pivotYear + (newSpan * (1 - ratio))
+    );
   }
 
-  private applyRangeChange(newStart: number, newEnd: number, clientY: number): void {
-    const scrollEl = this.scrollContainer();
-
-    if (!scrollEl) {
-      this.state.setRange(newStart, newEnd);
-      return;
-    }
-
-    const rect = scrollEl.getBoundingClientRect();
-    const mouseInScrollFrame = clientY - rect.top;
-    const absoluteY = scrollEl.scrollTop + mouseInScrollFrame;
-    const anchor = this.scrollSync.findScrollAnchor(absoluteY, this.state.processedLayout());
-
-    this.state.setRange(newStart, newEnd);
-    this.cdr.detectChanges();
-
-    const newY = this.scrollSync.resolveAnchorY(anchor, this.state.processedLayout());
-    if (newY !== null) {
-      scrollEl.scrollTop = Math.max(0, newY - mouseInScrollFrame);
-    }
-  }
-
-  private removePointer(event: PointerEvent): void {
-    const index = this.evCache.findIndex(cached => cached.pointerId === event.pointerId);
-    if (index > -1) {
-      this.evCache.splice(index, 1);
-      const target = event.target as HTMLElement;
-      if (target.hasPointerCapture && target.hasPointerCapture(event.pointerId)) {
-        target.releasePointerCapture(event.pointerId);
-      }
-    }
-  }
-
-  private getPinchDistance(): number {
-    const [p1, p2] = this.evCache;
-    const dx = p1.clientX - p2.clientX;
-    const dy = p1.clientY - p2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  private handlePinchZoom(clientY: number): void {
-    const curDiff = this.getPinchDistance();
-    if (this.prevPinchDiff > 0) {
-      const delta = curDiff - this.prevPinchDiff;
-      const rect = this.elementRef.nativeElement.getBoundingClientRect();
-      const centerX = ((this.evCache[0].clientX + this.evCache[1].clientX) / 2) - rect.left;
-
-      if (Math.abs(delta) < 2) return;
-
-      const result = this.calculateZoomState(centerX, -delta);
-
-      if (result) {
-        this.applyRangeChange(result.start, result.end, clientY);
-      }
-      this.prevPinchDiff = curDiff;
-    }
-  }
-
-  private updateHoverYear(x: number): void {
+  private updateHoverYear(clientX: number) {
+    const rect = this.el.nativeElement.getBoundingClientRect();
     const year = this.layout.calculateYearFromX(
-      x,
+      clientX - rect.left,
       this.state.startYear(),
       this.state.endYear(),
       this.state.layoutWidth()
     );
     this.state.setHoveredYear(year);
+  }
+
+  private getPinchDistance(): number {
+    const pointers = Array.from(this.activePointers.values());
+    if (pointers.length < 2) return 0;
+    return Math.hypot(
+      pointers[0].clientX - pointers[1].clientX,
+      pointers[0].clientY - pointers[1].clientY
+    );
+  }
+
+  private isScrollbarInteraction(event: PointerEvent): boolean {
+    const container = this.scrollContainer();
+    return !!container && event.target === container;
   }
 }

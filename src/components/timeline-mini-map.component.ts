@@ -187,6 +187,8 @@ export class TimelineMiniMapComponent {
     target.setPointerCapture(event.pointerId);
 
     this.isDragging.set(true);
+    this.state.isMinimapInteracting.set(true);
+
     this.dragMode.set(mode);
     this.dragStartX = event.clientX;
     this.initialStartYear = this.state.startYear();
@@ -278,6 +280,8 @@ export class TimelineMiniMapComponent {
       }
 
       this.isDragging.set(false);
+      this.state.isMinimapInteracting.set(false);
+
       this.dragMode.set(null);
       this.isPotentialClick = false;
 

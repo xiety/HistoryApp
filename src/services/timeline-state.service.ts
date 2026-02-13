@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { TimelineParserService, TimelineData, CategoryData, SubcategoryData, RawEvent, CategoryInfo } from './timeline-parser.service';
-import { TimelineLayoutService, SubcategoryLayout } from './timeline-layout.service';
+import { TimelineLayoutService, SubcategoryLayout, CategoryLayout } from './timeline-layout.service';
 import { TimelineConfigService } from './timeline-config.service';
 import { DATA_SOURCE_URL } from '../config/example-data';
 
@@ -73,6 +73,10 @@ export class TimelineStateService {
   readonly onlyShowVisibleInToc = signal<boolean>(false);
 
   readonly isHoverDetailsSuppressed = signal<boolean>(false);
+
+  readonly isUserInteracting = signal<boolean>(false);
+
+  readonly isMinimapInteracting = signal<boolean>(false);
 
   readonly tocFilterQuery = signal<string>('');
 
@@ -205,7 +209,7 @@ export class TimelineStateService {
     return { ...data, categories };
   };
 
-  readonly processedLayout = computed(() => {
+  readonly processedLayout = computed<CategoryLayout[]>(() => {
     const data = this.renderableData();
     const width = this.layoutWidth();
     const start = this.startYear();
@@ -213,19 +217,21 @@ export class TimelineStateService {
     const showLegends = this.showLegends();
     const compactMode = this.compactMode();
 
-    return data.categories.flatMap(cat => {
+    const rawCategories = data.categories.flatMap(cat => {
       const sublayouts: SubcategoryLayout[] = [];
 
       for (const sub of cat.subcategories) {
         const res = this.layout.computeLayout(sub.events, width, start, end, showLegends, compactMode);
         if (res.rowCount > 0) {
-          sublayouts.push({ id: sub.id, name: sub.name, ...res });
+          sublayouts.push({ id: sub.id, name: sub.name, y: 0, ...res });
         }
       }
 
       return sublayouts.length > 0 ?
-        [{ id: cat.id, name: cat.name, color: cat.color, subcategories: sublayouts }] : [];
+        [{ id: cat.id, name: cat.name, color: cat.color, subcategories: sublayouts, y: 0, height: 0 }] : [];
     });
+
+    return this.layout.computeVerticalPositions(rawCategories);
   });
 
   readonly activeBounds = computed(() => {

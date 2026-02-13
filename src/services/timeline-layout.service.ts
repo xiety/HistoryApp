@@ -44,6 +44,8 @@ export interface SubcategoryLayout {
   legendRows: LegendItem[][];
   height: number;
   legendStartY: number;
+
+  y: number;
 }
 
 export interface CategoryLayout {
@@ -51,12 +53,16 @@ export interface CategoryLayout {
   name: string;
   color: string;
   subcategories: SubcategoryLayout[];
+
+  y: number;
+  height: number;
 }
 
 export interface GridLine {
   x: number;
   xPct: number;
   label: number;
+  isMajor: boolean;
 }
 
 interface LayoutCandidate {
@@ -142,7 +148,8 @@ export class TimelineLayoutService {
     }
 
     const lines: GridLine[] = [];
-    const firstTick = Math.floor(start / step) * step;
+    const inv = 1 / step;
+    const firstTick = Math.floor(start * inv) / inv;
 
     const renderMargin = 200;
     const epsilon = 0.0001;
@@ -153,7 +160,8 @@ export class TimelineLayoutService {
         lines.push({
           x,
           xPct: (x / width) * 100,
-          label: year
+          label: year,
+          isMajor: Math.abs(year % 100) < epsilon
         });
       }
     }
@@ -167,7 +175,7 @@ export class TimelineLayoutService {
     viewEndYear: number,
     showLegends: boolean,
     compactMode: boolean
-  ): Omit<SubcategoryLayout, 'id' | 'name'> {
+  ): Omit<SubcategoryLayout, 'id' | 'name' | 'y'> {
 
     const candidates = this.generateCandidates(events, containerWidth, viewStartYear, viewEndYear);
 
@@ -182,6 +190,45 @@ export class TimelineLayoutService {
     this.postProcessVisuals(rows);
 
     return this.calculateLayoutMetrics(rows, legendRows);
+  }
+
+  computeVerticalPositions(categories: CategoryLayout[]): CategoryLayout[] {
+    let currentY = 0;
+
+    const catHeaderH = this.config.categoryHeaderHeight();
+    const catMargin = this.config.categoryHeaderMarginBottom();
+    const subHeaderH = this.config.subcategoryHeaderHeight();
+    const subMargin = this.config.subcategoryMarginBottom();
+    const subSeparator = this.config.subcategorySeparatorHeight();
+    const rowH = this.config.rowTotalHeight();
+    const legendRowH = this.config.legendRowHeight();
+    const legendPadding = this.config.legendBlockPadding();
+    const legendBottom = this.config.legendBottomPadding();
+
+    for (const cat of categories) {
+      cat.y = currentY;
+      currentY += (catHeaderH + catMargin);
+
+      const subLen = cat.subcategories.length;
+      for (let i = 0; i < subLen; i++) {
+        const sub = cat.subcategories[i];
+        sub.y = currentY;
+
+        if (sub.name) {
+          currentY += subHeaderH;
+        }
+
+        currentY += sub.height;
+
+        const isLastSub = i === subLen - 1;
+        const spacerH = subMargin + ((!isLastSub && sub.legendRows.length === 0) ? subSeparator : 0);
+        currentY += spacerH;
+      }
+
+      cat.height = currentY - cat.y;
+    }
+
+    return categories;
   }
 
   private generateCandidates(

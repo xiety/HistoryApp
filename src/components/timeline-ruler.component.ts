@@ -79,6 +79,7 @@ export class TimelineRulerComponent {
       this.state.endYear(),
       effectiveWidth
     );
+
     this.state.setPersistentMarker(year);
   }
 

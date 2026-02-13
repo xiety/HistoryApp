@@ -6,7 +6,7 @@ import { IconComponent } from './icon.component';
 
 @Component({
   selector: 'app-timeline-editor',
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './timeline-editor.component.html',
   styleUrls: ['./timeline-editor.component.css']
 })

@@ -5,8 +5,9 @@
     <div class="fluid-ruler-container" [style.margin-right.px]="config.viewPaddingRight()">
       <div class="ruler-grid-layer">
         @for (line of state.gridLines(); track line.label) {
-        <div class="ruler-tick" [style.left.%]="line.xPct"></div>
-        <span class="ruler-label" [style.left.%]="line.xPct">{{ line.label | yearFormat }}</span>
+        <div class="ruler-tick" [class.is-major]="line.isMajor" [style.left.%]="line.xPct"></div>
+        <span class="ruler-label" [class.is-major]="line.isMajor" [style.left.%]="line.xPct">{{ line.label | yearFormat
+          }}</span>
         }
       </div>
 

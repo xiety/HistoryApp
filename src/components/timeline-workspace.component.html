@@ -12,9 +12,9 @@
     }
   </div>
 
-  <div class="scroll-area custom-scrollbar" #scrollContainer (scroll)="onScroll()">
-    <app-timeline-ruler></app-timeline-ruler>
+  <app-timeline-ruler></app-timeline-ruler>
 
+  <div class="scroll-area custom-scrollbar" #scrollContainer (scroll)="onScroll()">
     <app-timeline-view></app-timeline-view>
   </div>
 </main>

@@ -1,14 +1,19 @@
-import { Component, inject, viewChild, ElementRef, computed, effect } from '@angular/core';
+import { Component, inject, viewChild, ElementRef, computed, effect, afterRenderEffect } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
-import { TimelineLayoutService } from '../services/timeline-layout.service';
-import { ScrollSyncService } from '../services/scroll-sync.service';
-import { TimelineUiStateService } from '../services/timeline-ui-state.service';
+import { TimelineLayoutService, CategoryLayout } from '../services/timeline-layout.service';
+import { ScrollSyncService, LayoutAnchor } from '../services/scroll-sync.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineInteractionsDirective } from '../directives/timeline-interactions.directive';
 import { TimelineRulerComponent } from './timeline-ruler.component';
 import { TimelineViewComponent } from './timeline-view.component';
+
+interface ActiveDragState {
+  anchor: LayoutAnchor;
+  startOffset: number;
+  currentDeltaY: number;
+}
 
 @Component({
   selector: 'app-timeline-workspace',
@@ -24,142 +29,215 @@ import { TimelineViewComponent } from './timeline-view.component';
 export class TimelineWorkspaceComponent {
   state = inject(TimelineStateService);
   layout = inject(TimelineLayoutService);
-  ui = inject(TimelineUiStateService);
   config = inject(TimelineConfigService);
   private scrollSync = inject(ScrollSyncService);
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
 
-  readonly cursorGuideX = computed(() => {
-    const year = this.state.hoveredYear();
-    if (year === null) return null;
-    return this.getGuidePositionPct(year);
-  });
+  private renderedLayout: CategoryLayout[] = [];
+  private lastSyncedLayout: CategoryLayout[] | null = null;
 
-  readonly persistentGuideX = computed(() => {
-    const year = this.state.persistentMarkerYear();
-    if (year === null) return null;
-    return this.getGuidePositionPct(year);
-  });
+  private lockedAnchor: LayoutAnchor | null = null;
+
+  private activeDrag: ActiveDragState | null = null;
+
+  private isRestoring = false;
+
+  readonly cursorGuideX = computed(() => this.getGuidePositionPct(this.state.hoveredYear()));
+  readonly persistentGuideX = computed(() => this.getGuidePositionPct(this.state.persistentMarkerYear()));
 
   constructor() {
     this.state.scrollTo$
       .pipe(takeUntilDestroyed())
-      .subscribe(id => this.scrollToCategory(id));
-
-    effect(() => {
-      const layout = this.state.processedLayout();
-
-
-      this.updateVisibility();
-    });
+      .subscribe(id => this.scrollToCategoryId(id));
 
     effect((onCleanup) => {
       const el = this.scrollContainer().nativeElement;
-
-      this.updateDimensions();
-
       const observer = new ResizeObserver(() => {
-        this.updateDimensions();
+        this.state.setContainerWidth(el.clientWidth);
+        this.restoreScroll();
       });
       observer.observe(el);
-
       onCleanup(() => observer.disconnect());
+    });
+
+    afterRenderEffect(() => {
+      const newLayout = this.state.processedLayout();
+      if (newLayout !== this.lastSyncedLayout) {
+        this.renderedLayout = newLayout;
+        this.lastSyncedLayout = newLayout;
+        this.restoreScroll();
+      }
     });
   }
 
-  private updateDimensions() {
-    const el = this.scrollContainer().nativeElement;
-    const newWidth = el.clientWidth;
+  setAnchorAtRelativeY(relY: number) {
+    const container = this.scrollContainer().nativeElement;
+    const absoluteY = container.scrollTop + relY;
 
-    if (Math.abs(newWidth - this.state.containerWidth()) < 1) return;
+    const rawAnchor = this.scrollSync.getAnchorAtY(this.renderedLayout, absoluteY);
 
-    this.state.setContainerWidth(newWidth);
-  }
-
-  private getGuidePositionPct(year: number): number | null {
-    const width = this.state.layoutWidth();
-    const x = this.layout.calculateXPosition(
-      year,
-      this.state.startYear(),
-      this.state.endYear(),
-      width
-    );
-    if (x > width) return null;
-    return (x / width) * 100;
-  }
-
-  private scrollToCategory(id: number) {
-    const el = this.scrollContainer().nativeElement;
-    const bounds = this.scrollSync.getCategoryBounds(this.state.processedLayout());
-    const target = bounds.get(id);
-
-    if (target) {
-      el.scrollTo({
-        top: target.top,
-        behavior: 'auto'
-      });
+    if (rawAnchor) {
+      this.lockedAnchor = {
+        ...rawAnchor,
+        offset: rawAnchor.offset + relY,
+        catOffset: rawAnchor.catOffset + relY
+      };
     }
   }
+
+  startDrag(relativePointerY: number) {
+    const container = this.scrollContainer().nativeElement;
+    const absoluteY = container.scrollTop + relativePointerY;
+
+    const anchor = this.scrollSync.getAnchorAtY(this.renderedLayout, absoluteY);
+
+    if (anchor) {
+      this.activeDrag = {
+        anchor,
+        startOffset: anchor.offset + absoluteY - container.scrollTop,
+        currentDeltaY: 0
+      };
+    } else {
+      this.updateLockedAnchor();
+      if (this.lockedAnchor) {
+        this.activeDrag = {
+          anchor: this.lockedAnchor,
+          startOffset: this.lockedAnchor.offset,
+          currentDeltaY: 0
+        };
+      }
+    }
+  }
+
+  updateDrag(totalDeltaY: number) {
+    if (!this.activeDrag) return;
+    this.activeDrag.currentDeltaY = totalDeltaY;
+    this.syncScrollToActiveDrag();
+  }
+
+  endDrag() {
+    this.activeDrag = null;
+    this.updateLockedAnchor();
+  }
+
+  saveScrollAnchor() {
+    if (!this.activeDrag) {
+      this.updateLockedAnchor();
+    }
+  }
+
 
   onScroll() {
-    this.updateVisibility();
+    this.updateVisibleCategories();
+
+    if (!this.isRestoring && !this.activeDrag) {
+      this.updateLockedAnchor();
+    }
   }
 
-  private updateVisibility() {
+  private updateLockedAnchor() {
     const container = this.scrollContainer().nativeElement;
+    if (container.scrollHeight === 0) return;
+
+    const anchor = this.scrollSync.getAnchor(this.renderedLayout, container.scrollTop, container.clientHeight);
+    if (anchor) {
+      this.lockedAnchor = anchor;
+    }
+  }
+
+  private restoreScroll() {
+    this.isRestoring = true;
+
+    if (this.activeDrag) {
+      this.syncScrollToActiveDrag();
+    } else if (this.lockedAnchor) {
+      this.syncScrollToPassiveAnchor();
+    }
+
+    this.isRestoring = false;
+    this.updateVisibleCategories();
+  }
+
+  private syncScrollToActiveDrag() {
+    if (!this.activeDrag) return;
+
+    const container = this.scrollContainer().nativeElement;
+
+    const targetOffset = this.activeDrag.startOffset + this.activeDrag.currentDeltaY;
+
+
+    const tempAnchor: LayoutAnchor = {
+      ...this.activeDrag.anchor,
+      offset: targetOffset,
+      catOffset: targetOffset + (this.activeDrag.anchor.catOffset - this.activeDrag.anchor.offset)
+    };
+
+    const newTop = this.scrollSync.restoreScrollPosition(this.renderedLayout, tempAnchor);
+
+    if (newTop !== null) {
+      container.scrollTop = newTop;
+    }
+  }
+
+  private syncScrollToPassiveAnchor() {
+    if (!this.lockedAnchor) return;
+    const container = this.scrollContainer().nativeElement;
+
+    const newTop = this.scrollSync.restoreScrollPosition(this.renderedLayout, this.lockedAnchor);
+    if (newTop !== null) {
+      container.scrollTop = newTop;
+    }
+  }
+
+  private updateVisibleCategories() {
+    const container = this.scrollContainer().nativeElement;
+    if (container.clientHeight === 0 || this.renderedLayout.length === 0) return;
+
+    const boundsMap = this.scrollSync.getCategoryBounds(this.renderedLayout);
     const scrollTop = container.scrollTop;
-    const clientHeight = container.clientHeight;
+    const viewBottom = scrollTop + container.clientHeight;
 
-    if (clientHeight === 0) return;
-
-    const boundsMap = this.scrollSync.getCategoryBounds(this.state.processedLayout());
-
-    let bestTopId: number | null = null;
-    let minDiff: number | null = null;
-    const buffer = 50;
     const visibleIds = new Set<number>();
+    let topCategoryId: number | null = null;
+    let minDist = Infinity;
 
     for (const [id, bounds] of boundsMap) {
-      const isVisible = (bounds.bottom > scrollTop) && (bounds.top < scrollTop + clientHeight);
-
-      if (isVisible) {
+      if (bounds.bottom > scrollTop && bounds.top < viewBottom) {
         visibleIds.add(id);
 
-        const relativeTop = bounds.top - scrollTop;
-        const isHeaderAtTop = relativeTop <= buffer && bounds.bottom > scrollTop + buffer;
-
-        if (isHeaderAtTop) {
-          bestTopId = id;
-          minDiff = 0;
-        }
-        else if (relativeTop > buffer) {
-          if (minDiff === null || (minDiff !== 0 && relativeTop < minDiff)) {
-            minDiff = relativeTop;
-            bestTopId = id;
-          }
+        const dist = Math.abs(bounds.top - scrollTop);
+        if (dist < minDist) {
+          minDist = dist;
+          topCategoryId = id;
         }
       }
     }
 
-    if (bestTopId === null && visibleIds.size > 0) {
-      let maxTop = -Infinity;
-      for (const id of visibleIds) {
-        const bounds = boundsMap.get(id);
-        if (bounds && bounds.top <= scrollTop + buffer) {
-          if (bounds.top > maxTop) {
-            maxTop = bounds.top;
-            bestTopId = id;
-          }
-        }
-      }
+    if (!topCategoryId && visibleIds.values().next()) {
+      topCategoryId = visibleIds.values().next().value || null;
     }
 
-    if (bestTopId === null && visibleIds.size > 0) {
-      bestTopId = visibleIds.values().next().value ?? null;
-    }
-
-    this.state.setActiveCategory(bestTopId);
+    this.state.setActiveCategory(topCategoryId);
     this.state.setVisibleCategoryIds(visibleIds);
+  }
+
+  private scrollToCategoryId(id: number) {
+    const el = this.scrollContainer().nativeElement;
+    const bounds = this.scrollSync.getCategoryBounds(this.renderedLayout).get(id);
+
+    if (bounds) {
+      this.isRestoring = true;
+      el.scrollTop = bounds.top;
+      this.updateLockedAnchor();
+      this.isRestoring = false;
+    }
+  }
+
+  private getGuidePositionPct(year: number | null): number | null {
+    if (year === null) return null;
+    const width = this.state.layoutWidth();
+    const x = this.layout.calculateXPosition(year, this.state.startYear(), this.state.endYear(), width);
+    return x <= width ? (x / width) * 100 : null;
   }
 }

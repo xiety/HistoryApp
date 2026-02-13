@@ -6,14 +6,19 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 10;
+  z-index: 0;
 }
 
 .grid-line-vertical {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid #eeeeee;
+}
+
+.grid-line-vertical.is-major {
+  border-left-color: #aaaaaa;
+  border-left-width: 1px;
 }
 
 .grid-line-solid {

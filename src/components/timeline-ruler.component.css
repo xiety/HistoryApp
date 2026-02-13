@@ -1,9 +1,14 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 130;
+  flex-shrink: 0;
+}
+
 .ruler-bar {
   background: white;
   border-bottom: 1px solid #cbd5e1;
-  z-index: 130;
-  position: sticky;
-  top: 0;
+  position: relative;
 }
 
 .ruler-canvas {
@@ -33,6 +38,12 @@
   pointer-events: none;
 }
 
+.ruler-tick.is-major {
+  height: 0.85em;
+  border-left-color: #64748b;
+  border-left-width: 1px;
+}
+
 .ruler-label {
   position: absolute;
   bottom: 0.8em;
@@ -41,6 +52,11 @@
   transform: translateX(4px);
   white-space: nowrap;
   pointer-events: none;
+}
+
+.ruler-label.is-major {
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .active-year-badge {

@@ -1,15 +1,15 @@
 import { Component, input, inject, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule, NgTemplateOutlet } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { SubcategoryLayout, RenderEvent } from '../services/timeline-layout.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { RawEvent } from '../services/timeline-parser.service';
 import { YearFormatPipe, formatYear } from '../pipes/year-format.pipe';
-import { RawEvent, CategoryInfo } from '../services/timeline-parser.service';
 
 @Component({
   selector: 'app-timeline-track',
   standalone: true,
-  imports: [CommonModule, NgTemplateOutlet, YearFormatPipe],
+  imports: [CommonModule, YearFormatPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './timeline-track.component.html',
   styleUrls: ['./timeline-track.component.css']
@@ -21,63 +21,6 @@ export class TimelineTrackComponent {
   config = inject(TimelineConfigService);
   state = inject(TimelineStateService);
 
-  toggleSelection(raw: RawEvent, event: Event) {
-    event.stopPropagation();
-    this.state.toggleEventSelection(raw);
-  }
-
-  setHovered(raw: RawEvent, event: MouseEvent) {
-    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
-    this.state.setHoveredEvent(raw);
-  }
-
-  clearHovered() {
-    this.state.setHoveredEvent(null);
-  }
-
-  isDimmed(raw: RawEvent): boolean {
-    if (!this.state.searchQuery()) return false;
-    if (this.state.isFilterMode()) return false;
-    return !this.state.matchingEventIds()?.has(raw.id);
-  }
-
-  isHovered(raw: RawEvent): boolean {
-    return this.state.hoveredGroupId() === raw.groupId;
-  }
-
-  isSelected(raw: RawEvent): boolean {
-    return this.state.selectedGroupId() === raw.groupId;
-  }
-
-  shouldShowActive(raw: RawEvent): boolean {
-    const isExactHover = this.state.hoveredEventId() === raw.id;
-    const isExactSelection = this.state.selectedEventId() === raw.id;
-
-    if (this.state.isHoverDetailsSuppressed()) {
-      return isExactSelection;
-    }
-
-    return isExactHover || isExactSelection;
-  }
-
-  hasDotsOverflow(relatedCount: number, visualWidth: number): boolean {
-    const DOT_WIDTH = 8;
-    return (relatedCount * DOT_WIDTH) > visualWidth;
-  }
-
-  getRelatedCategories(groupId: number): CategoryInfo[] {
-    const all = this.state.getGroupCategories(groupId);
-    if (all.length <= 1) return [];
-    return all.filter(c => c.id !== this.categoryId());
-  }
-
-  getTooltipText(raw: RawEvent): string {
-    const startStr = formatYear(raw.start);
-    const endStr = formatYear(raw.end);
-    return raw.end === raw.start
-      ? `${raw.name} (${startStr})`
-      : `${raw.name} (${startStr}-${endStr})`;
-  }
 
   getLegendBackgroundTop(): number {
     return this.trackData().legendStartY - this.config.legendBlockPadding();
@@ -91,22 +34,86 @@ export class TimelineTrackComponent {
     return this.trackData().legendStartY + (row * this.config.legendRowHeight());
   }
 
-  isLegendFull(event: RenderEvent): boolean {
-    return event.displayMode === 'legend-full';
+
+  onEventClick(event: MouseEvent, raw: RawEvent) {
+    event.stopPropagation();
+    this.state.toggleEventSelection(raw);
   }
 
-  isSingleYear(event: RenderEvent): boolean {
-    return event.raw.start === event.raw.end;
+  onEventMouseEnter(event: MouseEvent, raw: RawEvent) {
+    this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
+    this.state.setHoveredEvent(raw);
   }
 
-  hasLegend(event: RenderEvent): boolean {
-    return event.displayMode === 'legend-full' || event.displayMode === 'legend-overflow';
+  onEventMouseLeave() {
+    this.state.setHoveredEvent(null);
+  }
+
+
+  isSelected(raw: RawEvent): boolean {
+    return this.state.selectedGroupId() === raw.groupId;
+  }
+
+  isHovered(raw: RawEvent): boolean {
+    return this.state.hoveredGroupId() === raw.groupId;
+  }
+
+  shouldShowActive(raw: RawEvent): boolean {
+    const isExactHover = this.state.hoveredEventId() === raw.id;
+    const isExactSelection = this.state.selectedEventId() === raw.id;
+
+    if (this.state.isHoverDetailsSuppressed()) {
+      return isExactSelection;
+    }
+    return isExactHover || isExactSelection;
+  }
+
+  isDimmed(raw: RawEvent): boolean {
+    if (!this.state.searchQuery()) return false;
+    if (this.state.isFilterMode()) return false;
+    return !this.state.matchingEventIds()?.has(raw.id);
+  }
+
+
+  getTooltipText(raw: RawEvent): string {
+    const startStr = formatYear(raw.start);
+    const endStr = formatYear(raw.end);
+    return raw.end === raw.start
+      ? `${raw.name} (${startStr})`
+      : `${raw.name} (${startStr}-${endStr})`;
+  }
+
+  getRelatedCategories(raw: RawEvent) {
+    const all = this.state.getGroupCategories(raw.groupId);
+    if (all.length <= 1) return [];
+    return all.filter(c => c.id !== this.categoryId());
   }
 
   isOutOfBounds(year: number, type: 'start' | 'end'): boolean {
-    if (type === 'start') {
-      return year < this.state.startYear();
-    }
-    return year > this.state.endYear();
+    return type === 'start'
+      ? year < this.state.startYear()
+      : year > this.state.endYear();
+  }
+
+  isSingleYear(item: RenderEvent): boolean {
+    return item.raw.start === item.raw.end;
+  }
+
+  isLegendFull(item: RenderEvent): boolean {
+    return item.displayMode === 'legend-full';
+  }
+
+  hasLegendNumber(item: RenderEvent): boolean {
+    return item.displayMode === 'legend-full' || item.displayMode === 'legend-overflow';
+  }
+
+  getEventGradientStyle(item: RenderEvent, isActive: boolean): string | null {
+    if (isActive) return null;
+    return `linear-gradient(to right, transparent ${item.visualWidth}px, #fff ${item.visualWidth}px)`;
+  }
+
+  hasDotsOverflow(item: RenderEvent, relatedCount: number): boolean {
+    const DOT_WIDTH = 8;
+    return (relatedCount * DOT_WIDTH) > item.visualWidth;
   }
 }

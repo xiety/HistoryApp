@@ -1,109 +1,109 @@
 <div class="events-track" [style.height.px]="trackData().height">
 
-    @if (trackData().legendRows.length > 0) {
-    <div class="legend-background" [style.top.px]="getLegendBackgroundTop()" [style.bottom.px]="0"></div>
-    }
+  @if (trackData().legendRows.length > 0) {
+  <div class="legend-background" [style.top.px]="getLegendBackgroundTop()" [style.bottom.px]="0"></div>
+  }
 
-    @for (row of trackData().rows; track $index) {
-    @for (event of row; track event.raw.id) {
+  @for (row of trackData().rows; track $index) {
+  @for (event of row; track event.raw.id) {
+  @let raw = event.raw;
+  @let isActive = shouldShowActive(raw);
 
-    <div class="event-rect" [style.left.%]="event.xPct" [style.width.%]="event.widthPct"
-        [style.top.px]="getEventTop(event.row)" [style.height.px]="config.rowHeight()"
-        [class.selected]="isSelected(event.raw)" [class.is-hovered]="isHovered(event.raw)"
-        [class.instance-active]="shouldShowActive(event.raw)" [class.is-dimmed]="isDimmed(event.raw)"
-        [title]="getTooltipText(event.raw)" (click)="toggleSelection(event.raw, $event)"
-        (mouseenter)="setHovered(event.raw, $event)" (mouseleave)="clearHovered()">
+  <div class="timeline-event" [class.selected]="isSelected(raw)" [class.is-hovered]="isHovered(raw)"
+    [class.instance-active]="isActive" [class.is-dimmed]="isDimmed(raw)" [attr.title]="getTooltipText(raw)"
+    [style.left.%]="event.xPct" [style.width.%]="event.widthPct" [style.top.px]="getEventTop(event.row)"
+    [style.height.px]="config.rowHeight()" (click)="onEventClick($event, raw)"
+    (mouseenter)="onEventMouseEnter($event, raw)" (mouseleave)="onEventMouseLeave()">
 
-        <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
-            [class.no-border-right]="!event.hasRightBorder">
-        </div>
+    <div class="interaction-layer">
+      <div class="event-bg" [class.is-single-year]="isSingleYear(event)" [class.no-border-left]="event.clippedLeft"
+        [class.no-border-right]="!event.hasRightBorder">
+      </div>
 
-        <div class="event-label label-base" [class.is-active]="shouldShowActive(event.raw)"
-            [class.is-legend-full]="isLegendFull(event)"
-            [style.maxWidth.px]="shouldShowActive(event.raw) ? null : event.safeWidth"
-            [style.background-image]="shouldShowActive(event.raw) ? 'linear-gradient(to right, transparent ' + event.visualWidth + 'px, #fff ' + event.visualWidth + 'px)' : null">
+      <div class="event-label label-base" [class.is-active]="isActive" [class.is-legend-full]="isLegendFull(event)"
+        [style.maxWidth.px]="isActive ? null : event.safeWidth"
+        [style.background-image]="getEventGradientStyle(event, isActive)">
 
-            @if (hasLegend(event)) {
-            <span class="legend-id">{{ event.legendId }}</span>
-            }
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !shouldShowActive(event.raw)">{{
-                event.raw.name }}</span>
-        </div>
+        @if (hasLegendNumber(event)) {
+        <span class="legend-id">{{ event.legendId }}</span>
+        }
+        <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">
+          {{ raw.name }}
+        </span>
+      </div>
 
-        <div class="event-label label-mask" [class.is-legend-full]="isLegendFull(event)" aria-hidden="true">
-            @if (hasLegend(event)) {
-            <span class="legend-id">{{ event.legendId }}</span>
-            }
-            <span class="event-text" [class.text-fade-mask]="event.needsMask && !shouldShowActive(event.raw)">{{
-                event.raw.name }}</span>
-        </div>
+      <div class="event-label label-mask" [class.is-legend-full]="isLegendFull(event)" aria-hidden="true">
+        @if (hasLegendNumber(event)) {
+        <span class="legend-id">{{ event.legendId }}</span>
+        }
+        <span class="event-text" [class.text-fade-mask]="event.needsMask && !isActive">
+          {{ raw.name }}
+        </span>
+      </div>
 
-        @if (state.showRelatedDots()) {
-        @let related = getRelatedCategories(event.raw.groupId);
-        @if (related.length > 0) {
-        <div class="related-dots" [style.maxWidth.px]="shouldShowActive(event.raw) ? null : event.safeWidth"
-            [class.text-fade-mask]="hasDotsOverflow(related.length, event.safeWidth) && !shouldShowActive(event.raw)">
-            @for (cat of related; track cat.id) {
-            <div class="related-dot" [style.background-color]="'hsl(' + cat.color + ')'"
-                [title]="'Also in: ' + cat.name"></div>
-            }
+      @let related = getRelatedCategories(raw);
+      @if (related.length > 0) {
+      <div class="related-dots" [style.maxWidth.px]="isActive ? null : event.safeWidth"
+        [class.text-fade-mask]="hasDotsOverflow(event, related.length) && !isActive">
+        @for (cat of related; track cat.id) {
+        <div class="related-dot" [style.background-color]="'hsl(' + cat.color + ')'" [title]="'Also in: ' + cat.name">
         </div>
         }
-        }
+      </div>
+      }
 
-        @if (shouldShowActive(event.raw)) {
-        @let related = getRelatedCategories(event.raw.groupId);
-        @if (related.length > 0) {
-        <div class="category-tag-container">
-            @for (cat of related; track cat.name) {
-            <div class="category-mini-tag" [style.background-color]="'hsl(' + cat.color + ')'">
-                {{ cat.name }}
-            </div>
-            }
-        </div>
-        }
-        <ng-container *ngTemplateOutlet="dateTags; context: { raw: event.raw }"></ng-container>
-        }
+      @if (isActive) {
+      <ng-container *ngTemplateOutlet="activeOverlay; context: { raw: raw, related: related }"></ng-container>
+      }
     </div>
-    }
-    }
+  </div>
+  }
+  }
 
-    @for (row of trackData().legendRows; track $index) {
-    @for (item of row; track item.legendId) {
+  @for (row of trackData().legendRows; track $index) {
+  @for (item of row; track item.legendId) {
+  @let raw = item.raw;
+  @let isActive = shouldShowActive(raw);
 
-    <div class="legend-item" [style.left.%]="item.xPct" [style.top.px]="getLegendItemTop(item.row)"
-        [style.height.px]="config.legendRowHeight()" [class.selected]="isSelected(item.raw)"
-        [class.is-hovered]="isHovered(item.raw)" [class.is-dimmed]="isDimmed(item.raw)"
-        [title]="getTooltipText(item.raw)" (click)="toggleSelection(item.raw, $event)"
-        (mouseenter)="setHovered(item.raw, $event)" (mouseleave)="clearHovered()">
+  <div class="timeline-event" [class.selected]="isSelected(raw)" [class.is-hovered]="isHovered(raw)"
+    [class.instance-active]="isActive" [class.is-dimmed]="isDimmed(raw)" [attr.title]="getTooltipText(raw)"
+    [style.left.%]="item.xPct" [style.top.px]="getLegendItemTop(item.row)" [style.height.px]="config.legendRowHeight()"
+    (click)="onEventClick($event, raw)" (mouseenter)="onEventMouseEnter($event, raw)"
+    (mouseleave)="onEventMouseLeave()">
+
+    <div class="interaction-layer">
+      <span class="legend-text">
         {{ item.text }}
+      </span>
 
-        @if (shouldShowActive(item.raw)) {
-        @let related = getRelatedCategories(item.raw.groupId);
-        @if (related.length > 0) {
-        <div class="category-tag-container">
-            @for (cat of related; track cat.name) {
-            <div class="category-mini-tag" [style.background-color]="'hsl(' + cat.color + ')'">
-                {{ cat.name }}
-            </div>
-            }
-        </div>
-        }
-        <ng-container *ngTemplateOutlet="dateTags; context: { raw: item.raw }"></ng-container>
-        }
+      @if (isActive) {
+      @let related = getRelatedCategories(raw);
+      <ng-container *ngTemplateOutlet="activeOverlay; context: { raw: raw, related: related }"></ng-container>
+      }
     </div>
-    }
-    }
+  </div>
+  }
+  }
 </div>
 
-<ng-template #dateTags let-raw="raw">
-    <div class="date-tag start-tag" [class.out-of-bounds]="isOutOfBounds(raw.start, 'start')">
-        {{ raw.start | yearFormat }}
-    </div>
-
-    @if (raw.end !== raw.start) {
-    <div class="date-tag end-tag" [class.out-of-bounds]="isOutOfBounds(raw.end, 'end')">
-        {{ raw.end | yearFormat }}
+<ng-template #activeOverlay let-raw="raw" let-related="related">
+  @if (related.length > 0) {
+  <div class="category-tag-container">
+    @for (cat of related; track cat.name) {
+    <div class="category-mini-tag" [style.background-color]="'hsl(' + cat.color + ')'">
+      {{ cat.name }}
     </div>
     }
+  </div>
+  }
+
+  <div class="date-tag start-tag" [class.out-of-bounds]="isOutOfBounds(raw.start, 'start')">
+    {{ raw.start | yearFormat }}
+  </div>
+
+  @if (raw.end !== raw.start) {
+  <div class="date-tag end-tag" [class.out-of-bounds]="isOutOfBounds(raw.end, 'end')">
+    {{ raw.end | yearFormat }}
+  </div>
+  }
 </ng-template>
