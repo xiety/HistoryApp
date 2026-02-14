@@ -7,29 +7,7 @@
     <app-timeline-grid [lines]="state.gridLines()"></app-timeline-grid>
 
     @for (category of state.processedLayout(); track category.id) {
-    <section class="category-group" [style.--category-color]="category.color">
-
-      <div class="category-header" [class.is-highlighted]="state.highlightedCategoryId() === category.id"
-        (animationend)="state.clearHighlight()" [style.height.px]="config.categoryHeaderHeight()"
-        [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
-        <h2 class="category-badge">
-          {{ category.name }}
-        </h2>
-      </div>
-
-      @for (sub of category.subcategories; track sub.id) {
-      <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
-        [class.no-legend]="sub.legendRows.length === 0" [style.padding-bottom.px]="config.subcategoryMarginBottom()">
-
-        @if (sub.name) {
-        <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
-        }
-
-        <app-timeline-track [trackData]="sub" [categoryId]="category.id"></app-timeline-track>
-
-      </div>
-      }
-    </section>
+    <app-timeline-category [layout]="category"></app-timeline-category>
     }
 
     @if (state.processedLayout().length === 0) {

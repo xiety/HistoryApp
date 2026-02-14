@@ -5,6 +5,7 @@ import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineLayoutService, CategoryLayout } from '../services/timeline-layout.service';
 import { ScrollSyncService, LayoutAnchor } from '../services/scroll-sync.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
+import { TimelineGeometryService } from '../services/timeline-geometry.service';
 import { TimelineInteractionsDirective } from '../directives/timeline-interactions.directive';
 import { TimelineRulerComponent } from './timeline-ruler.component';
 import { TimelineViewComponent } from './timeline-view.component';
@@ -31,16 +32,14 @@ export class TimelineWorkspaceComponent {
   layout = inject(TimelineLayoutService);
   config = inject(TimelineConfigService);
   private scrollSync = inject(ScrollSyncService);
+  private geometry = inject(TimelineGeometryService);
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
 
   private renderedLayout: CategoryLayout[] = [];
   private lastSyncedLayout: CategoryLayout[] | null = null;
-
   private lockedAnchor: LayoutAnchor | null = null;
-
   private activeDrag: ActiveDragState | null = null;
-
   private isRestoring = false;
 
   readonly cursorGuideX = computed(() => this.getGuidePositionPct(this.state.hoveredYear()));
@@ -74,7 +73,6 @@ export class TimelineWorkspaceComponent {
   setAnchorAtRelativeY(relY: number) {
     const container = this.scrollContainer().nativeElement;
     const absoluteY = container.scrollTop + relY;
-
     const rawAnchor = this.scrollSync.getAnchorAtY(this.renderedLayout, absoluteY);
 
     if (rawAnchor) {
@@ -89,7 +87,6 @@ export class TimelineWorkspaceComponent {
   startDrag(relativePointerY: number) {
     const container = this.scrollContainer().nativeElement;
     const absoluteY = container.scrollTop + relativePointerY;
-
     const anchor = this.scrollSync.getAnchorAtY(this.renderedLayout, absoluteY);
 
     if (anchor) {
@@ -127,10 +124,8 @@ export class TimelineWorkspaceComponent {
     }
   }
 
-
   onScroll() {
     this.updateVisibleCategories();
-
     if (!this.isRestoring && !this.activeDrag) {
       this.updateLockedAnchor();
     }
@@ -139,7 +134,6 @@ export class TimelineWorkspaceComponent {
   private updateLockedAnchor() {
     const container = this.scrollContainer().nativeElement;
     if (container.scrollHeight === 0) return;
-
     const anchor = this.scrollSync.getAnchor(this.renderedLayout, container.scrollTop, container.clientHeight);
     if (anchor) {
       this.lockedAnchor = anchor;
@@ -148,24 +142,19 @@ export class TimelineWorkspaceComponent {
 
   private restoreScroll() {
     this.isRestoring = true;
-
     if (this.activeDrag) {
       this.syncScrollToActiveDrag();
     } else if (this.lockedAnchor) {
       this.syncScrollToPassiveAnchor();
     }
-
     this.isRestoring = false;
     this.updateVisibleCategories();
   }
 
   private syncScrollToActiveDrag() {
     if (!this.activeDrag) return;
-
     const container = this.scrollContainer().nativeElement;
-
     const targetOffset = this.activeDrag.startOffset + this.activeDrag.currentDeltaY;
-
 
     const tempAnchor: LayoutAnchor = {
       ...this.activeDrag.anchor,
@@ -174,20 +163,14 @@ export class TimelineWorkspaceComponent {
     };
 
     const newTop = this.scrollSync.restoreScrollPosition(this.renderedLayout, tempAnchor);
-
-    if (newTop !== null) {
-      container.scrollTop = newTop;
-    }
+    if (newTop !== null) container.scrollTop = newTop;
   }
 
   private syncScrollToPassiveAnchor() {
     if (!this.lockedAnchor) return;
     const container = this.scrollContainer().nativeElement;
-
     const newTop = this.scrollSync.restoreScrollPosition(this.renderedLayout, this.lockedAnchor);
-    if (newTop !== null) {
-      container.scrollTop = newTop;
-    }
+    if (newTop !== null) container.scrollTop = newTop;
   }
 
   private updateVisibleCategories() {
@@ -205,7 +188,6 @@ export class TimelineWorkspaceComponent {
     for (const [id, bounds] of boundsMap) {
       if (bounds.bottom > scrollTop && bounds.top < viewBottom) {
         visibleIds.add(id);
-
         const dist = Math.abs(bounds.top - scrollTop);
         if (dist < minDist) {
           minDist = dist;
@@ -237,7 +219,7 @@ export class TimelineWorkspaceComponent {
   private getGuidePositionPct(year: number | null): number | null {
     if (year === null) return null;
     const width = this.state.layoutWidth();
-    const x = this.layout.calculateXPosition(year, this.state.startYear(), this.state.endYear(), width);
+    const x = this.geometry.calculateXPosition(year, this.state.startYear(), this.state.endYear(), width);
     return x <= width ? (x / width) * 100 : null;
   }
 }

@@ -14,11 +14,11 @@
   top: 0;
   bottom: 0;
   border-left: 1px solid #eeeeee;
-}
 
-.grid-line-vertical.is-major {
-  border-left-color: #aaaaaa;
-  border-left-width: 1px;
+  &.is-major {
+    border-left-color: #aaaaaa;
+    border-left-width: 1px;
+  }
 }
 
 .grid-line-solid {

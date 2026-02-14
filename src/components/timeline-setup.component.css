@@ -31,12 +31,12 @@
 .setting-label {
   display: flex;
   flex-direction: column;
-}
 
-.setting-label span:first-child {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #334155;
+  span:first-child {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+  }
 }
 
 .setting-desc {

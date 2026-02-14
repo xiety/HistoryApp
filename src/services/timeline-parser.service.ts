@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { generateCategoryColor } from '../utils/color.utils';
 
 export interface RawEvent {
   id: number;
@@ -49,13 +50,9 @@ interface DateRange {
   providedIn: 'root'
 })
 export class TimelineParserService {
-
   private readonly HEADER_REGEX = /^#\s*(.+)$/;
-
   private readonly CAT_WITH_SUB_REGEX = /^(.+?)\s*\((.+)\)$/;
-
   private readonly MULTI_RANGE_REGEX = /^(.+) ((?:\d+(?: BCE)?(?:-\d+(?: BCE)?)?(?:, ?)?)+)$/;
-
   private readonly BCE_SUFFIX = ' BCE';
 
   private nextId = 0;
@@ -65,99 +62,119 @@ export class TimelineParserService {
     this.nextId = 0;
     this.groupIdCounter = 0;
 
-    const categories: CategoryData[] = [];
-    const groupCategories = new Map<number, CategoryInfo[]>();
-
-    let minYear = Infinity;
-    let maxYear = -Infinity;
-    let hasEvents = false;
-
-    const ensureCategory = (name: string): CategoryData => {
-      let cat = categories.find(c => c.name === name);
-      if (!cat) {
-        cat = {
-          id: ++this.nextId,
-          name,
-          color: this.generateColor(name),
-          subcategories: []
-        };
-        categories.push(cat);
-      }
-      return cat;
+    const context = {
+      categories: [] as CategoryData[],
+      groupCategories: new Map<number, CategoryInfo[]>(),
+      currentTargets: [] as Target[],
+      minYear: Infinity,
+      maxYear: -Infinity,
+      hasEvents: false
     };
-
-    const ensureSubcategory = (cat: CategoryData, name: string): SubcategoryData => {
-      let sub = cat.subcategories.find(s => s.name === name);
-      if (!sub) {
-        sub = { id: ++this.nextId, name, events: [] };
-        cat.subcategories.push(sub);
-      }
-      return sub;
-    };
-
-    let currentTargets: Target[] = [];
 
     const lines = text.split(/\r?\n/);
-
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      if (trimmed.startsWith('#')) {
-        currentTargets = this.parseHeader(trimmed);
-        continue;
-      }
-
-      if (currentTargets.length === 0) continue;
-
-      const match = trimmed.match(this.MULTI_RANGE_REGEX);
-      if (!match) continue;
-
-      const name = match[1];
-      const ranges = this.parseDateString(match[2]);
-
-      if (ranges.length > 0) {
-        const groupId = ++this.groupIdCounter;
-        hasEvents = true;
-
-        const groupInfos: CategoryInfo[] = [];
-        const seenCats = new Set<string>();
-
-        for (const target of currentTargets) {
-          if (!seenCats.has(target.category)) {
-            seenCats.add(target.category);
-            const cat = ensureCategory(target.category);
-            groupInfos.push({ id: cat.id, name: cat.name, color: cat.color });
-          }
-        }
-
-        if (groupInfos.length > 0) {
-          groupInfos.sort((a, b) => a.name.localeCompare(b.name));
-          groupCategories.set(groupId, groupInfos);
-        }
-
-        for (const range of ranges) {
-          if (range.start < minYear) minYear = range.start;
-          if (range.end > maxYear) maxYear = range.end;
-
-          for (const target of currentTargets) {
-            const cat = ensureCategory(target.category);
-            const sub = ensureSubcategory(cat, target.subcategory);
-
-            sub.events.push({
-              id: ++this.nextId,
-              groupId,
-              name,
-              start: range.start,
-              end: range.end,
-              lineNumber: i
-            });
-          }
-        }
-      }
+      this.processLine(lines[i], i, context);
     }
 
+    this.sortEvents(context.categories);
+
+    return {
+      categories: context.categories,
+      groupCategories: context.groupCategories,
+      minYear: context.hasEvents ? context.minYear : 0,
+      maxYear: context.hasEvents ? context.maxYear : 0
+    };
+  }
+
+  private processLine(line: string, lineIndex: number, ctx: any) {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    if (trimmed.startsWith('#')) {
+      ctx.currentTargets = this.parseHeader(trimmed);
+      return;
+    }
+
+    if (ctx.currentTargets.length === 0) return;
+
+    const match = trimmed.match(this.MULTI_RANGE_REGEX);
+    if (!match) return;
+
+    const name = match[1];
+    const ranges = this.parseDateString(match[2]);
+
+    if (ranges.length > 0) {
+      this.createEvents(name, ranges, lineIndex, ctx);
+    }
+  }
+
+  private createEvents(name: string, ranges: DateRange[], lineIndex: number, ctx: any) {
+    const groupId = ++this.groupIdCounter;
+    ctx.hasEvents = true;
+
+    const groupInfos = this.extractGroupInfo(ctx.currentTargets, ctx.categories);
+    if (groupInfos.length > 0) {
+      ctx.groupCategories.set(groupId, groupInfos);
+    }
+
+    for (const range of ranges) {
+      if (range.start < ctx.minYear) ctx.minYear = range.start;
+      if (range.end > ctx.maxYear) ctx.maxYear = range.end;
+
+      for (const target of ctx.currentTargets) {
+        const cat = this.ensureCategory(target.category, ctx.categories);
+        const sub = this.ensureSubcategory(cat, target.subcategory);
+
+        sub.events.push({
+          id: ++this.nextId,
+          groupId,
+          name,
+          start: range.start,
+          end: range.end,
+          lineNumber: lineIndex
+        });
+      }
+    }
+  }
+
+  private extractGroupInfo(targets: Target[], categories: CategoryData[]): CategoryInfo[] {
+    const infos: CategoryInfo[] = [];
+    const seen = new Set<string>();
+
+    for (const t of targets) {
+      if (!seen.has(t.category)) {
+        seen.add(t.category);
+        const cat = this.ensureCategory(t.category, categories);
+        infos.push({ id: cat.id, name: cat.name, color: cat.color });
+      }
+    }
+    return infos.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  private ensureCategory(name: string, categories: CategoryData[]): CategoryData {
+    let cat = categories.find(c => c.name === name);
+    if (!cat) {
+      cat = {
+        id: ++this.nextId,
+        name,
+        color: generateCategoryColor(name),
+        subcategories: []
+      };
+      categories.push(cat);
+    }
+    return cat;
+  }
+
+  private ensureSubcategory(cat: CategoryData, name: string): SubcategoryData {
+    let sub = cat.subcategories.find(s => s.name === name);
+    if (!sub) {
+      sub = { id: ++this.nextId, name, events: [] };
+      cat.subcategories.push(sub);
+    }
+    return sub;
+  }
+
+  private sortEvents(categories: CategoryData[]) {
     for (const cat of categories) {
       for (const sub of cat.subcategories) {
         sub.events.sort((a, b) => {
@@ -166,19 +183,11 @@ export class TimelineParserService {
         });
       }
     }
-
-    return {
-      categories,
-      groupCategories,
-      minYear: hasEvents ? minYear : 0,
-      maxYear: hasEvents ? maxYear : 0
-    };
   }
 
   private parseHeader(line: string): Target[] {
     const match = line.match(this.HEADER_REGEX);
     if (!match) return [];
-
     const content = match[1].trim();
     if (!content) return [];
 
@@ -192,13 +201,9 @@ export class TimelineParserService {
 
     return this.splitByComma(content).map(part => {
       const subMatch = part.match(this.CAT_WITH_SUB_REGEX);
-      if (subMatch) {
-        return {
-          category: subMatch[1].trim(),
-          subcategory: subMatch[2].trim()
-        };
-      }
-      return { category: part, subcategory: '' };
+      return subMatch
+        ? { category: subMatch[1].trim(), subcategory: subMatch[2].trim() }
+        : { category: part, subcategory: '' };
     });
   }
 
@@ -213,24 +218,12 @@ export class TimelineParserService {
 
   private parseYear(raw: string): number {
     if (raw.endsWith(this.BCE_SUFFIX)) {
-      const numberPart = raw.slice(0, -this.BCE_SUFFIX.length);
-      return -parseInt(numberPart, 10);
+      return -parseInt(raw.slice(0, -this.BCE_SUFFIX.length), 10);
     }
     return parseInt(raw, 10);
   }
 
   private splitByComma(str: string): string[] {
     return str.split(',').map(s => s.trim()).filter(Boolean);
-  }
-
-  private generateColor(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const h = Math.abs(hash % 360);
-    const s = 75 + (Math.abs(hash) % 25);
-    const l = 35 + (Math.abs(hash) % 15);
-    return `${h}, ${s}%, ${l}%`;
   }
 }

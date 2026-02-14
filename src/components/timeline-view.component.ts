@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineGridComponent } from './timeline-grid.component';
-import { TimelineTrackComponent } from './timeline-track.component';
+import { TimelineCategoryComponent } from './timeline-category.component';
 
 @Component({
   selector: 'app-timeline-view',
   standalone: true,
-  imports: [CommonModule, TimelineGridComponent, TimelineTrackComponent],
+  imports: [CommonModule, TimelineGridComponent, TimelineCategoryComponent],
   templateUrl: './timeline-view.component.html',
   styleUrls: ['./timeline-view.component.css']
 })

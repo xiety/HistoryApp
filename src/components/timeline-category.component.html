@@ -1,0 +1,45 @@
+<section class="category-group" [style.--category-color]="layout().color">
+
+  <div class="category-header" [class.is-highlighted]="state.highlightedCategoryId() === layout().id"
+    (animationend)="state.clearHighlight()" [style.height.px]="config.categoryHeaderHeight()"
+    [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
+    <h2 class="category-badge">
+      {{ layout().name }}
+    </h2>
+  </div>
+
+  @for (sub of layout().subcategories; track sub.id) {
+  <div class="subcategory-group" [class.has-legend]="sub.legendRows.length > 0"
+    [class.no-legend]="sub.legendRows.length === 0" [style.padding-bottom.px]="config.subcategoryMarginBottom()">
+
+    @if (sub.name) {
+    <span class="subcategory-label" [style.height.px]="config.subcategoryHeaderHeight()">{{ sub.name }}</span>
+    }
+
+    <div class="events-track" [style.height.px]="sub.height">
+
+      @if (sub.legendRows.length > 0) {
+      <div class="legend-background" [style.top.px]="getLegendBackgroundTop(0, sub.legendStartY)" [style.bottom.px]="0">
+      </div>
+      }
+
+      @for (row of sub.rows; track $index) {
+      @for (event of row; track event.raw.id) {
+      <app-timeline-event [data]="event" type="event" [categoryId]="layout().id" [top]="getEventTop(0, event.row)"
+        [height]="config.rowHeight()">
+      </app-timeline-event>
+      }
+      }
+
+      @for (row of sub.legendRows; track $index) {
+      @for (item of row; track item.legendId) {
+      <app-timeline-event [data]="item" type="legend" [categoryId]="layout().id"
+        [top]="getLegendItemTop(0, sub.legendStartY, item.row)" [height]="config.legendRowHeight()">
+      </app-timeline-event>
+      }
+      }
+
+    </div>
+  </div>
+  }
+</section>

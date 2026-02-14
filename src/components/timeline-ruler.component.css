@@ -36,12 +36,12 @@
   height: 0.6em;
   border-left: 1px solid #94a3b8;
   pointer-events: none;
-}
 
-.ruler-tick.is-major {
-  height: 0.85em;
-  border-left-color: #64748b;
-  border-left-width: 1px;
+  &.is-major {
+    height: 0.85em;
+    border-left-color: #64748b;
+    border-left-width: 1px;
+  }
 }
 
 .ruler-label {
@@ -52,11 +52,11 @@
   transform: translateX(4px);
   white-space: nowrap;
   pointer-events: none;
-}
 
-.ruler-label.is-major {
-  font-weight: 700;
-  color: #1e293b;
+  &.is-major {
+    font-weight: 700;
+    color: #1e293b;
+  }
 }
 
 .active-year-badge {
@@ -100,8 +100,8 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-}
 
-.persistent-year-badge:hover {
-  background-color: #2563eb;
+  &:hover {
+    background-color: #2563eb;
+  }
 }

@@ -1,0 +1,76 @@
+<div class="timeline-event" [class.selected]="isSelected()" [class.is-hovered]="isHovered()"
+  [class.instance-active]="isActive()" [class.is-dimmed]="isDimmed()" [attr.title]="tooltip()"
+  [style.left.%]="data().xPct" [style.width.%]="data().widthPct" [style.top.px]="top()" [style.height.px]="height()"
+  (click)="onClick($event)" (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave()">
+
+  <div class="interaction-layer">
+
+    @if (asRenderEvent(); as ev) {
+    <div class="event-bg" [class.is-single-year]="isSingleYear()" [class.no-border-left]="ev.clippedLeft"
+      [class.no-border-right]="!ev.hasRightBorder">
+    </div>
+
+    <div class="event-label label-base" [class.is-active]="isActive()"
+      [class.is-legend-full]="ev.displayMode === 'legend-full'" [style.maxWidth.px]="isActive() ? null : ev.safeWidth"
+      [style.background-image]="gradientStyle()">
+
+      @if (ev.displayMode === 'legend-full' || ev.displayMode === 'legend-overflow') {
+      <span class="legend-id">{{ ev.legendId }}</span>
+      }
+      <span class="event-text" [class.text-fade-mask]="ev.needsMask && !isActive()">
+        {{ raw().name }}
+      </span>
+    </div>
+
+    <div class="event-label label-mask" [class.is-legend-full]="ev.displayMode === 'legend-full'" aria-hidden="true">
+      @if (ev.displayMode === 'legend-full' || ev.displayMode === 'legend-overflow') {
+      <span class="legend-id">{{ ev.legendId }}</span>
+      }
+      <span class="event-text" [class.text-fade-mask]="ev.needsMask && !isActive()">
+        {{ raw().name }}
+      </span>
+    </div>
+
+    @let related = relatedCategories();
+    @if (related.length > 0) {
+    <div class="related-dots" [style.maxWidth.px]="isActive() ? null : ev.safeWidth"
+      [class.text-fade-mask]="hasDotsOverflow() && !isActive()">
+      @for (cat of related; track cat.id) {
+      <div class="related-dot" [style.background-color]="'hsl(' + cat.color + ')'" [title]="'Also in: ' + cat.name">
+      </div>
+      }
+    </div>
+    }
+    }
+
+    @if (asLegendItem(); as item) {
+    <span class="legend-text">
+      {{ item.text }}
+    </span>
+    }
+
+    @if (isActive()) {
+    @let related = relatedCategories();
+    @if (related.length > 0) {
+    <div class="category-tag-container">
+      @for (cat of related; track cat.name) {
+      <div class="category-mini-tag" [style.background-color]="'hsl(' + cat.color + ')'">
+        {{ cat.name }}
+      </div>
+      }
+    </div>
+    }
+
+    <div class="date-tag start-tag" [class.out-of-bounds]="isOutOfBounds(raw().start, 'start')">
+      {{ raw().start | yearFormat }}
+    </div>
+
+    @if (!isSingleYear()) {
+    <div class="date-tag end-tag" [class.out-of-bounds]="isOutOfBounds(raw().end, 'end')">
+      {{ raw().end | yearFormat }}
+    </div>
+    }
+    }
+
+  </div>
+</div>

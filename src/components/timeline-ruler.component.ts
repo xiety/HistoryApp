@@ -1,8 +1,8 @@
 import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
-import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
+import { TimelineGeometryService } from '../services/timeline-geometry.service';
 import { YearFormatPipe, formatYear } from '../pipes/year-format.pipe';
 
 @Component({
@@ -14,7 +14,7 @@ import { YearFormatPipe, formatYear } from '../pipes/year-format.pipe';
 export class TimelineRulerComponent {
   state = inject(TimelineStateService);
   config = inject(TimelineConfigService);
-  private layout = inject(TimelineLayoutService);
+  private geometry = inject(TimelineGeometryService);
 
   readonly hoveredYearLabel = computed(() => {
     if (this.state.hoveredYear() === null) return null;
@@ -27,7 +27,7 @@ export class TimelineRulerComponent {
     if (year === null) return null;
 
     const width = this.state.layoutWidth();
-    const x = this.layout.calculateXPosition(
+    const x = this.geometry.calculateXPosition(
       year,
       this.state.startYear(),
       this.state.endYear(),
@@ -49,7 +49,7 @@ export class TimelineRulerComponent {
     if (year === null) return null;
 
     const width = this.state.layoutWidth();
-    const x = this.layout.calculateXPosition(
+    const x = this.geometry.calculateXPosition(
       year,
       this.state.startYear(),
       this.state.endYear(),
@@ -64,16 +64,14 @@ export class TimelineRulerComponent {
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
 
-
     const clickX = event.clientX - rect.left;
     const totalWidth = rect.width;
     const padding = this.config.viewPaddingRight();
     const effectiveWidth = totalWidth - padding;
 
-
     if (clickX > effectiveWidth) return;
 
-    const year = this.layout.calculateYearFromX(
+    const year = this.geometry.calculateYearFromX(
       clickX,
       this.state.startYear(),
       this.state.endYear(),

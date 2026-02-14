@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GridLine } from '../services/timeline-layout.service';
+import { GridLine } from '../services/timeline-geometry.service';
 
 @Component({
   selector: 'app-timeline-grid',
