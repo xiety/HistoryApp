@@ -6,7 +6,7 @@ import { TimelineStateService } from './timeline-state.service';
 import { TimelineConfigService } from './timeline-config.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelinePersistenceService {
   private state = inject(TimelineStateService);
@@ -46,11 +46,8 @@ export class TimelinePersistenceService {
 
   private watch() {
     toObservable(this.state.inputText)
-      .pipe(
-        debounceTime(1000),
-        distinctUntilChanged()
-      )
-      .subscribe(val => this.save(this.KEY_TEXT, val));
+      .pipe(debounceTime(1000), distinctUntilChanged())
+      .subscribe((val) => this.save(this.KEY_TEXT, val));
 
     effect(() => {
       this.save(this.KEY_PREFS, {
@@ -59,16 +56,16 @@ export class TimelinePersistenceService {
         showRelatedDots: this.state.showRelatedDots(),
         compactMode: this.state.compactMode(),
         isFilterMode: this.state.isFilterMode(),
-        baseFontSize: this.config.baseFontSize()
+        baseFontSize: this.config.baseFontSize(),
       });
     });
 
     combineLatest({
       start: toObservable(this.state.startYear),
-      end: toObservable(this.state.endYear)
+      end: toObservable(this.state.endYear),
     })
       .pipe(debounceTime(500))
-      .subscribe(range => this.save(this.KEY_RANGE, range));
+      .subscribe((range) => this.save(this.KEY_RANGE, range));
   }
 
   private apply<T>(source: any, key: string, signal: WritableSignal<T>) {

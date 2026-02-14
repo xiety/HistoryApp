@@ -1,4 +1,9 @@
-import { Component, input, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
@@ -11,7 +16,7 @@ import { TimelineEventComponent } from './timeline-event.component';
   imports: [CommonModule, TimelineEventComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './timeline-category.component.html',
-  styleUrls: ['./timeline-category.component.css']
+  styleUrls: ['./timeline-category.component.css'],
 })
 export class TimelineCategoryComponent {
   config = inject(TimelineConfigService);
@@ -24,10 +29,10 @@ export class TimelineCategoryComponent {
   }
 
   getEventTop(subY: number, row: number): number {
-    return subY + (row * this.config.rowTotalHeight());
+    return subY + row * this.config.rowTotalHeight();
   }
 
   getLegendItemTop(subY: number, legendStartY: number, row: number): number {
-    return subY + legendStartY + (row * this.config.legendRowHeight());
+    return subY + legendStartY + row * this.config.legendRowHeight();
   }
 }

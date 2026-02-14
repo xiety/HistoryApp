@@ -9,7 +9,7 @@ import { YearFormatPipe, formatYear } from '../pipes/year-format.pipe';
   selector: 'app-timeline-ruler',
   imports: [CommonModule, YearFormatPipe],
   templateUrl: './timeline-ruler.component.html',
-  styleUrls: ['./timeline-ruler.component.css']
+  styleUrls: ['./timeline-ruler.component.css'],
 })
 export class TimelineRulerComponent {
   state = inject(TimelineStateService);
@@ -31,7 +31,7 @@ export class TimelineRulerComponent {
       year,
       this.state.startYear(),
       this.state.endYear(),
-      width
+      width,
     );
 
     if (x > width) return null;
@@ -53,7 +53,7 @@ export class TimelineRulerComponent {
       year,
       this.state.startYear(),
       this.state.endYear(),
-      width
+      width,
     );
 
     if (x > width) return null;
@@ -75,7 +75,7 @@ export class TimelineRulerComponent {
       clickX,
       this.state.startYear(),
       this.state.endYear(),
-      effectiveWidth
+      effectiveWidth,
     );
 
     this.state.setPersistentMarker(year);

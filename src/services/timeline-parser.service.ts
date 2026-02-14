@@ -47,12 +47,13 @@ interface DateRange {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineParserService {
   private readonly HEADER_REGEX = /^#\s*(.+)$/;
   private readonly CAT_WITH_SUB_REGEX = /^(.+?)\s*\((.+)\)$/;
-  private readonly MULTI_RANGE_REGEX = /^(.+) ((?:\d+(?: BCE)?(?:-\d+(?: BCE)?)?(?:, ?)?)+)$/;
+  private readonly MULTI_RANGE_REGEX =
+    /^(.+) ((?:\d+(?: BCE)?(?:-\d+(?: BCE)?)?(?:, ?)?)+)$/;
   private readonly BCE_SUFFIX = ' BCE';
 
   private nextId = 0;
@@ -68,7 +69,7 @@ export class TimelineParserService {
       currentTargets: [] as Target[],
       minYear: Infinity,
       maxYear: -Infinity,
-      hasEvents: false
+      hasEvents: false,
     };
 
     const lines = text.split(/\r?\n/);
@@ -82,7 +83,7 @@ export class TimelineParserService {
       categories: context.categories,
       groupCategories: context.groupCategories,
       minYear: context.hasEvents ? context.minYear : 0,
-      maxYear: context.hasEvents ? context.maxYear : 0
+      maxYear: context.hasEvents ? context.maxYear : 0,
     };
   }
 
@@ -108,11 +109,19 @@ export class TimelineParserService {
     }
   }
 
-  private createEvents(name: string, ranges: DateRange[], lineIndex: number, ctx: any) {
+  private createEvents(
+    name: string,
+    ranges: DateRange[],
+    lineIndex: number,
+    ctx: any,
+  ) {
     const groupId = ++this.groupIdCounter;
     ctx.hasEvents = true;
 
-    const groupInfos = this.extractGroupInfo(ctx.currentTargets, ctx.categories);
+    const groupInfos = this.extractGroupInfo(
+      ctx.currentTargets,
+      ctx.categories,
+    );
     if (groupInfos.length > 0) {
       ctx.groupCategories.set(groupId, groupInfos);
     }
@@ -131,13 +140,16 @@ export class TimelineParserService {
           name,
           start: range.start,
           end: range.end,
-          lineNumber: lineIndex
+          lineNumber: lineIndex,
         });
       }
     }
   }
 
-  private extractGroupInfo(targets: Target[], categories: CategoryData[]): CategoryInfo[] {
+  private extractGroupInfo(
+    targets: Target[],
+    categories: CategoryData[],
+  ): CategoryInfo[] {
     const infos: CategoryInfo[] = [];
     const seen = new Set<string>();
 
@@ -151,14 +163,17 @@ export class TimelineParserService {
     return infos.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private ensureCategory(name: string, categories: CategoryData[]): CategoryData {
-    let cat = categories.find(c => c.name === name);
+  private ensureCategory(
+    name: string,
+    categories: CategoryData[],
+  ): CategoryData {
+    let cat = categories.find((c) => c.name === name);
     if (!cat) {
       cat = {
         id: ++this.nextId,
         name,
         color: generateCategoryColor(name),
-        subcategories: []
+        subcategories: [],
       };
       categories.push(cat);
     }
@@ -166,7 +181,7 @@ export class TimelineParserService {
   }
 
   private ensureSubcategory(cat: CategoryData, name: string): SubcategoryData {
-    let sub = cat.subcategories.find(s => s.name === name);
+    let sub = cat.subcategories.find((s) => s.name === name);
     if (!sub) {
       sub = { id: ++this.nextId, name, events: [] };
       cat.subcategories.push(sub);
@@ -192,14 +207,14 @@ export class TimelineParserService {
     if (!content) return [];
 
     if (content.includes(':')) {
-      const [subPart, catPart] = content.split(':').map(s => s.trim());
-      return this.splitByComma(catPart || '').map(cat => ({
+      const [subPart, catPart] = content.split(':').map((s) => s.trim());
+      return this.splitByComma(catPart || '').map((cat) => ({
         category: cat,
-        subcategory: subPart
+        subcategory: subPart,
       }));
     }
 
-    return this.splitByComma(content).map(part => {
+    return this.splitByComma(content).map((part) => {
       const subMatch = part.match(this.CAT_WITH_SUB_REGEX);
       return subMatch
         ? { category: subMatch[1].trim(), subcategory: subMatch[2].trim() }
@@ -208,10 +223,11 @@ export class TimelineParserService {
   }
 
   private parseDateString(dateStr: string): DateRange[] {
-    return dateStr.split(',').map(part => {
+    return dateStr.split(',').map((part) => {
       const rangeParts = part.trim().split('-');
       const start = this.parseYear(rangeParts[0].trim());
-      const end = rangeParts.length > 1 ? this.parseYear(rangeParts[1].trim()) : start;
+      const end =
+        rangeParts.length > 1 ? this.parseYear(rangeParts[1].trim()) : start;
       return { start, end };
     });
   }
@@ -224,6 +240,9 @@ export class TimelineParserService {
   }
 
   private splitByComma(str: string): string[] {
-    return str.split(',').map(s => s.trim()).filter(Boolean);
+    return str
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 }

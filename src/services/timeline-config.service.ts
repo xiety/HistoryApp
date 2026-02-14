@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineConfigService {
   readonly defaultStartYear = 1700;
@@ -9,7 +9,9 @@ export class TimelineConfigService {
 
   readonly baseFontSize = signal<number>(10);
 
-  readonly font = computed(() => `bold ${this.baseFontSize()}px ui-sans-serif, system-ui, sans-serif`);
+  readonly font = computed(
+    () => `bold ${this.baseFontSize()}px ui-sans-serif, system-ui, sans-serif`,
+  );
 
   readonly rowHeight = computed(() => this.baseFontSize() * 2);
   readonly gapY = computed(() => 2);
@@ -20,7 +22,9 @@ export class TimelineConfigService {
   readonly sidePadding = computed(() => 1);
   readonly minEventGap = computed(() => 0);
 
-  readonly legendRowHeight = computed(() => Math.max(14, this.baseFontSize() * 1.4));
+  readonly legendRowHeight = computed(() =>
+    Math.max(14, this.baseFontSize() * 1.4),
+  );
   readonly legendBlockPadding = computed(() => this.baseFontSize() * 0.6);
   readonly legendItemGap = computed(() => this.baseFontSize());
   readonly legendBottomPadding = computed(() => this.baseFontSize() * 0.8);

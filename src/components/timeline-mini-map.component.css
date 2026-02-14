@@ -180,7 +180,7 @@
   }
 
   &::after {
-    content: '';
+    content: "";
     display: block;
     width: 2px;
     height: 14px;
@@ -215,7 +215,7 @@
   opacity: 0.9;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 100%;
     left: 50%;

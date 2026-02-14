@@ -1,4 +1,10 @@
-import { Component, inject, viewChild, ElementRef, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  viewChild,
+  ElementRef,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineStateService } from '../services/timeline-state.service';
@@ -8,11 +14,12 @@ import { IconComponent } from './icon.component';
   selector: 'app-timeline-editor',
   imports: [CommonModule, FormsModule],
   templateUrl: './timeline-editor.component.html',
-  styleUrls: ['./timeline-editor.component.css']
+  styleUrls: ['./timeline-editor.component.css'],
 })
 export class TimelineEditorComponent {
   state = inject(TimelineStateService);
-  editorInput = viewChild.required<ElementRef<HTMLTextAreaElement>>('editorInput');
+  editorInput =
+    viewChild.required<ElementRef<HTMLTextAreaElement>>('editorInput');
 
   constructor() {
     effect(() => {

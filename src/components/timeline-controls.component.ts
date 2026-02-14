@@ -9,7 +9,7 @@ import { IconComponent } from './icon.component';
   selector: 'app-timeline-controls',
   imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './timeline-controls.component.html',
-  styleUrls: ['./timeline-controls.component.css']
+  styleUrls: ['./timeline-controls.component.css'],
 })
 export class TimelineControlsComponent {
   state = inject(TimelineStateService);

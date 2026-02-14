@@ -4,7 +4,7 @@ export type SidebarTab = 'editor' | 'toc' | 'setup';
 export type SidebarMode = 'auto' | 'visible' | 'hidden';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineUiStateService {
   readonly sidebarMode = signal<SidebarMode>('auto');

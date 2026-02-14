@@ -1,16 +1,26 @@
 <header class="top-bar">
   <div class="branding-area" [attr.data-mode]="ui.sidebarMode()">
-    <button class="menu-button btn-show" (click)="ui.showSidebar()" title="Show Sidebar">
+    <button
+      class="menu-button btn-show"
+      (click)="ui.showSidebar()"
+      title="Show Sidebar">
       <app-icon name="menu" [size]="20" />
     </button>
 
-    <button class="menu-button btn-hide" (click)="ui.hideSidebar()" title="Hide Sidebar">
+    <button
+      class="menu-button btn-hide"
+      (click)="ui.hideSidebar()"
+      title="Hide Sidebar">
       <app-icon name="chevrons-left" [size]="20" />
     </button>
 
     <div class="branding-text">
       <h1 class="app-title">Visualize History Timeline</h1>
-      <a href="https://github.com/xiety/HistoryApp" target="_blank" rel="noopener noreferrer" class="repo-link">
+      <a
+        href="https://github.com/xiety/HistoryApp"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="repo-link">
         GitHub
       </a>
     </div>
@@ -19,22 +29,32 @@
   <div class="search-area">
     <div class="search-input-wrapper">
       <app-icon name="search" [size]="14" class="search-icon" />
-      <input type="text" placeholder="Highlight events..." class="search-input" [ngModel]="state.searchQuery()"
+      <input
+        type="text"
+        placeholder="Highlight events..."
+        class="search-input"
+        [ngModel]="state.searchQuery()"
         (ngModelChange)="state.searchQuery.set($event)" />
       @if (state.searchQuery()) {
-      <div class="search-actions">
-        <span class="search-count-badge">
-          {{ state.matchCount() }}
-        </span>
-        <button class="clear-button" (click)="clearSearch()">
-          <app-icon name="x" [size]="12" [strokeWidth]="3" />
-        </button>
-      </div>
+        <div class="search-actions">
+          <span class="search-count-badge">
+            {{ state.matchCount() }}
+          </span>
+          <button class="clear-button" (click)="clearSearch()">
+            <app-icon name="x" [size]="12" [strokeWidth]="3" />
+          </button>
+        </div>
       }
     </div>
 
-    <label class="filter-toggle" [class.is-active]="state.isFilterMode()" title="Hide non-matching items">
-      <input type="checkbox" [ngModel]="state.isFilterMode()" (ngModelChange)="state.isFilterMode.set($event)" />
+    <label
+      class="filter-toggle"
+      [class.is-active]="state.isFilterMode()"
+      title="Hide non-matching items">
+      <input
+        type="checkbox"
+        [ngModel]="state.isFilterMode()"
+        (ngModelChange)="state.isFilterMode.set($event)" />
       <span>Filter View</span>
     </label>
   </div>

@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './setting-toggle.component.html',
-  styleUrls: ['./setting-toggle.component.css']
+  styleUrls: ['./setting-toggle.component.css'],
 })
 export class SettingToggleComponent {
   label = input.required<string>();

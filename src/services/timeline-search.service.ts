@@ -4,14 +4,13 @@ import { DensityData } from './timeline-state.service';
 
 export interface SearchResult {
   matches: Set<number>;
-  bounds: { min: number; max: number; } | null;
+  bounds: { min: number; max: number } | null;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineSearchService {
-
   buildSearchIndex(data: TimelineData, query: string): SearchResult | null {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return null;
@@ -38,14 +37,14 @@ export class TimelineSearchService {
 
     return {
       matches,
-      bounds: matches.size > 0 ? { min, max } : null
+      bounds: matches.size > 0 ? { min, max } : null,
     };
   }
 
   computeDensity(
     data: TimelineData,
-    bounds: { min: number, max: number; },
-    matchingIds: Set<number> | null
+    bounds: { min: number; max: number },
+    matchingIds: Set<number> | null,
   ): DensityData {
     const span = bounds.max - bounds.min;
     if (span <= 0) return { total: [], matching: null };
@@ -81,8 +80,8 @@ export class TimelineSearchService {
     const invMax = maxVal > 0 ? 1 / maxVal : 0;
 
     return {
-      total: total.map(v => v * invMax),
-      matching: matching ? matching.map(v => v * invMax) : null
+      total: total.map((v) => v * invMax),
+      matching: matching ? matching.map((v) => v * invMax) : null,
     };
   }
 }

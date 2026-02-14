@@ -1,31 +1,44 @@
 <div class="ruler-bar" [style.height.px]="config.rulerHeight()">
-  <div class="ruler-canvas" style="width: 100%;" [style.font-size.px]="config.rulerFontSize()"
+  <div
+    class="ruler-canvas"
+    style="width: 100%"
+    [style.font-size.px]="config.rulerFontSize()"
     (click)="onRulerClick($event)">
-
-    <div class="fluid-ruler-container" [style.margin-right.px]="config.viewPaddingRight()">
+    <div
+      class="fluid-ruler-container"
+      [style.margin-right.px]="config.viewPaddingRight()">
       <div class="ruler-grid-layer">
         @for (line of state.gridLines(); track line.label) {
-        <div class="ruler-tick" [class.is-major]="line.isMajor" [style.left.%]="line.xPct"></div>
-        <span class="ruler-label" [class.is-major]="line.isMajor" [style.left.%]="line.xPct">{{ line.label | yearFormat
-          }}</span>
+          <div
+            class="ruler-tick"
+            [class.is-major]="line.isMajor"
+            [style.left.%]="line.xPct"></div>
+          <span
+            class="ruler-label"
+            [class.is-major]="line.isMajor"
+            [style.left.%]="line.xPct"
+            >{{ line.label | yearFormat }}</span
+          >
         }
       </div>
 
       @let pX = persistentMarkerXPct();
       @if (pX !== null) {
-      <div class="persistent-year-badge" [style.left.%]="pX" (click)="clearPersistentMarker($event)"
-        title="Click to remove marker">
-        {{ persistentMarkerLabel() }}
-      </div>
+        <div
+          class="persistent-year-badge"
+          [style.left.%]="pX"
+          (click)="clearPersistentMarker($event)"
+          title="Click to remove marker">
+          {{ persistentMarkerLabel() }}
+        </div>
       }
 
       @let hX = hoveredYearXPct();
       @if (hX !== null) {
-      <div class="active-year-badge" [style.left.%]="hX">
-        {{ hoveredYearLabel() }}
-      </div>
+        <div class="active-year-badge" [style.left.%]="hX">
+          {{ hoveredYearLabel() }}
+        </div>
       }
     </div>
-
   </div>
 </div>

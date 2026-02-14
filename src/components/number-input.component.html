@@ -1,10 +1,24 @@
-<button class="stepper-btn left-btn" (click)="doStep(-1, $event)" tabindex="-1" title="Decrease">
+<button
+  class="stepper-btn left-btn"
+  (click)="doStep(-1, $event)"
+  tabindex="-1"
+  title="Decrease">
   -
 </button>
 
-<input #inputEl type="text" inputmode="numeric" (focus)="onFocus()" (blur)="onBlur()" (keydown)="onKeyDown($event)"
+<input
+  #inputEl
+  type="text"
+  inputmode="numeric"
+  (focus)="onFocus()"
+  (blur)="onBlur()"
+  (keydown)="onKeyDown($event)"
   class="range-input" />
 
-<button class="stepper-btn right-btn" (click)="doStep(1, $event)" tabindex="-1" title="Increase">
+<button
+  class="stepper-btn right-btn"
+  (click)="doStep(1, $event)"
+  tabindex="-1"
+  title="Increase">
   +
 </button>

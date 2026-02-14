@@ -9,12 +9,16 @@
   z-index: 990;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s linear 0.3s;
 
   &[data-mode="visible"] {
     opacity: 1;
     visibility: visible;
-    transition: opacity 0.3s ease, visibility 0s linear 0s;
+    transition:
+      opacity 0.3s ease,
+      visibility 0s linear 0s;
 
     @media (min-width: 768px) {
       display: none !important;

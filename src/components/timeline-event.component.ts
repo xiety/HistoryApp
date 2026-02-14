@@ -1,4 +1,10 @@
-import { Component, input, inject, computed, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  inject,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { TimelineConfigService } from '../services/timeline-config.service';
@@ -14,7 +20,7 @@ export type EventType = 'event' | 'legend';
   imports: [CommonModule, YearFormatPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './timeline-event.component.html',
-  styleUrls: ['./timeline-event.component.css']
+  styleUrls: ['./timeline-event.component.css'],
 })
 export class TimelineEventComponent {
   private state = inject(TimelineStateService);
@@ -29,12 +35,12 @@ export class TimelineEventComponent {
 
   readonly raw = computed(() => this.data().raw);
 
-  readonly isSelected = computed(() =>
-    this.state.selectedGroupId() === this.raw().groupId
+  readonly isSelected = computed(
+    () => this.state.selectedGroupId() === this.raw().groupId,
   );
 
-  readonly isHovered = computed(() =>
-    this.state.hoveredGroupId() === this.raw().groupId
+  readonly isHovered = computed(
+    () => this.state.hoveredGroupId() === this.raw().groupId,
   );
 
   readonly isDimmed = computed(() => {
@@ -68,7 +74,7 @@ export class TimelineEventComponent {
     if (!this.state.showRelatedDots()) return [];
     const all = this.state.getGroupCategories(this.raw().groupId);
     if (all.length <= 1) return [];
-    return all.filter(c => c.id !== this.categoryId());
+    return all.filter((c) => c.id !== this.categoryId());
   });
 
   readonly asRenderEvent = computed(() => {
@@ -92,7 +98,7 @@ export class TimelineEventComponent {
     const ev = this.asRenderEvent();
     if (!ev) return false;
     const DOT_WIDTH = 8;
-    return (this.relatedCategories().length * DOT_WIDTH) > ev.visualWidth;
+    return this.relatedCategories().length * DOT_WIDTH > ev.visualWidth;
   });
 
   onClick(event: MouseEvent) {

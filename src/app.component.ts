@@ -13,10 +13,10 @@ import { TimelinePersistenceService } from './services/timeline-persistence.serv
     TimelineControlsComponent,
     TimelineSidebarComponent,
     TimelineWorkspaceComponent,
-    TimelineMiniMapComponent
+    TimelineMiniMapComponent,
   ],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./app.component.css'],
 })
 export class AppComponent {
   private persistence = inject(TimelinePersistenceService);

@@ -60,14 +60,15 @@
   height: 100%;
 }
 
-
 .event-bg {
   position: absolute;
   inset: 0;
   border-radius: 2px;
   background-color: color-mix(in srgb, hsl(var(--category-color)), white 85%);
   border: 1px solid hsl(var(--category-color));
-  transition: background-color 0.1s, border-color 0.1s;
+  transition:
+    background-color 0.1s,
+    border-color 0.1s;
   z-index: 2;
 
   &.is-single-year {
@@ -117,8 +118,16 @@
 }
 
 .text-fade-mask {
-  mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(
+    to right,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black calc(100% - 12px),
+    transparent 100%
+  );
 }
 
 .label-base {
@@ -152,7 +161,9 @@
   display: block;
   padding: 1px 0.5em;
   color: hsl(var(--category-color));
-  transition: background-color 0.1s, color 0.1s;
+  transition:
+    background-color 0.1s,
+    color 0.1s;
   white-space: nowrap;
 }
 
@@ -180,7 +191,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  transform: translateY(2.0em);
+  transform: translateY(2em);
   display: flex;
   flex-wrap: nowrap;
   gap: 4px;

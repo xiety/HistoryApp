@@ -6,27 +6,42 @@
       <span>Base Font Size</span>
       <span class="setting-desc">Adjust the global scaling</span>
     </label>
-    <app-number-input [value]="config.baseFontSize()" (valueChange)="config.baseFontSize.set($event)" [min]="8"
-      [max]="32" style="width: 80px;">
+    <app-number-input
+      [value]="config.baseFontSize()"
+      (valueChange)="config.baseFontSize.set($event)"
+      [min]="8"
+      [max]="32"
+      style="width: 80px">
     </app-number-input>
   </div>
 
   <div class="divider"></div>
 
-  <app-setting-toggle label="Use Legends" description="Replace small text with ID numbers" [value]="state.showLegends()"
+  <app-setting-toggle
+    label="Use Legends"
+    description="Replace small text with ID numbers"
+    [value]="state.showLegends()"
     (valueChange)="state.showLegends.set($event)">
   </app-setting-toggle>
 
-  <app-setting-toggle label="Show Related Categories" description="Show dots for events in multiple categories"
-    [value]="state.showRelatedDots()" (valueChange)="state.showRelatedDots.set($event)">
+  <app-setting-toggle
+    label="Show Related Categories"
+    description="Show dots for events in multiple categories"
+    [value]="state.showRelatedDots()"
+    (valueChange)="state.showRelatedDots.set($event)">
   </app-setting-toggle>
 
-  <app-setting-toggle label="Compact Mode" description="Allow text overflow & clipping" [value]="state.compactMode()"
+  <app-setting-toggle
+    label="Compact Mode"
+    description="Allow text overflow & clipping"
+    [value]="state.compactMode()"
     (valueChange)="state.compactMode.set($event)">
   </app-setting-toggle>
 
-  <app-setting-toggle label="Hide Small Events" description="Hide items smaller than 2px"
-    [value]="state.hideSmallEvents()" (valueChange)="state.hideSmallEvents.set($event)">
+  <app-setting-toggle
+    label="Hide Small Events"
+    description="Hide items smaller than 2px"
+    [value]="state.hideSmallEvents()"
+    (valueChange)="state.hideSmallEvents.set($event)">
   </app-setting-toggle>
-
 </div>

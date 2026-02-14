@@ -1,20 +1,22 @@
-<div class="timeline-layout-area" style="width: 100%;" [style.font-size.px]="config.baseFontSize()"
+<div
+  class="timeline-layout-area"
+  style="width: 100%"
+  [style.font-size.px]="config.baseFontSize()"
   (click)="clearSelection()">
-
-  <div class="fluid-timeline-container" [style.margin-right.px]="config.viewPaddingRight()"
+  <div
+    class="fluid-timeline-container"
+    [style.margin-right.px]="config.viewPaddingRight()"
     [style.padding-bottom.px]="config.viewPaddingBottom()">
-
     <app-timeline-grid [lines]="state.gridLines()"></app-timeline-grid>
 
     @for (category of state.processedLayout(); track category.id) {
-    <app-timeline-category [layout]="category"></app-timeline-category>
+      <app-timeline-category [layout]="category"></app-timeline-category>
     }
 
     @if (state.processedLayout().length === 0) {
-    <div class="empty-message">
-      <p>No events found in this range.</p>
-    </div>
+      <div class="empty-message">
+        <p>No events found in this range.</p>
+      </div>
     }
-
   </div>
 </div>

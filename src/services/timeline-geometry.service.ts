@@ -17,7 +17,7 @@ export interface GeometryResult {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineGeometryService {
   private config = inject(TimelineConfigService);
@@ -26,22 +26,32 @@ export class TimelineGeometryService {
     const span = end - start;
     if (span <= 0) return 0;
     const sidePadding = this.config.sidePadding();
-    const effectiveWidth = Math.max(1, width - (2 * sidePadding));
+    const effectiveWidth = Math.max(1, width - 2 * sidePadding);
     return effectiveWidth / span;
   }
 
-  calculateXPosition(year: number, start: number, end: number, width: number): number {
+  calculateXPosition(
+    year: number,
+    start: number,
+    end: number,
+    width: number,
+  ): number {
     const pxPerYear = this.calculatePixelsPerYear(width, start, end);
     if (pxPerYear <= 0) return width / 2;
     const sidePadding = this.config.sidePadding();
-    return sidePadding + ((year - start) * pxPerYear);
+    return sidePadding + (year - start) * pxPerYear;
   }
 
-  calculateYearFromX(x: number, start: number, end: number, width: number): number {
+  calculateYearFromX(
+    x: number,
+    start: number,
+    end: number,
+    width: number,
+  ): number {
     const pxPerYear = this.calculatePixelsPerYear(width, start, end);
     if (pxPerYear <= 0) return start;
     const sidePadding = this.config.sidePadding();
-    return start + ((x - sidePadding) / pxPerYear);
+    return start + (x - sidePadding) / pxPerYear;
   }
 
   calculateEventGeometry(
@@ -49,13 +59,13 @@ export class TimelineGeometryService {
     visualEnd: number,
     viewStart: number,
     width: number,
-    pixelsPerYear: number
+    pixelsPerYear: number,
   ): GeometryResult {
     const sidePadding = this.config.sidePadding();
     const durationYears = Math.max(1, visualEnd - visualStart);
 
-    const rawStartX = sidePadding + ((visualStart - viewStart) * pixelsPerYear);
-    const rawEndX = rawStartX + (durationYears * pixelsPerYear);
+    const rawStartX = sidePadding + (visualStart - viewStart) * pixelsPerYear;
+    const rawEndX = rawStartX + durationYears * pixelsPerYear;
 
     let x = Math.round(rawStartX);
     const endX = Math.round(rawEndX);
@@ -68,7 +78,7 @@ export class TimelineGeometryService {
     const rightEdge = width;
 
     if (x < 0) {
-      w -= (0 - x);
+      w -= 0 - x;
       x = 0;
       clippedLeft = true;
     }
@@ -80,17 +90,24 @@ export class TimelineGeometryService {
 
     if (w < 1) w = 1;
 
-    const visualWidth = clippedRight ? w : (w > 1 ? w - 1 : w);
+    const visualWidth = clippedRight ? w : w > 1 ? w - 1 : w;
 
     return { x, width: w, visualWidth, clippedLeft, clippedRight };
   }
 
-  generateGridLines(start: number, end: number, width: number, minPxGap: number = 60): GridLine[] {
+  generateGridLines(
+    start: number,
+    end: number,
+    width: number,
+    minPxGap: number = 60,
+  ): GridLine[] {
     const pxPerYear = this.calculatePixelsPerYear(width, start, end);
     if (pxPerYear <= 0) return [];
 
     const minYearGap = minPxGap / pxPerYear;
-    const niceSteps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
+    const niceSteps = [
+      1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000,
+    ];
 
     let step = niceSteps[niceSteps.length - 1];
     for (const s of niceSteps) {
@@ -116,7 +133,7 @@ export class TimelineGeometryService {
           x,
           xPct: (x / width) * 100,
           label: year,
-          isMajor: Math.abs(year % 100) < epsilon
+          isMajor: Math.abs(year % 100) < epsilon,
         });
       }
     }

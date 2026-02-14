@@ -1,4 +1,11 @@
-import { Component, input, output, viewChild, ElementRef, effect } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  viewChild,
+  ElementRef,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -6,7 +13,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-number-input',
   imports: [CommonModule, FormsModule],
   templateUrl: './number-input.component.html',
-  styleUrls: ['./number-input.component.css']
+  styleUrls: ['./number-input.component.css'],
 })
 export class NumberInputComponent {
   value = input.required<number>();
@@ -17,7 +24,8 @@ export class NumberInputComponent {
   step = input(1);
   shiftStep = input(10);
 
-  readonly inputRef = viewChild.required<ElementRef<HTMLInputElement>>('inputEl');
+  readonly inputRef =
+    viewChild.required<ElementRef<HTMLInputElement>>('inputEl');
 
   constructor() {
     effect(() => {
@@ -70,7 +78,7 @@ export class NumberInputComponent {
 
   doStep(dir: -1 | 1, event: MouseEvent) {
     const increment = event.shiftKey ? this.shiftStep() : this.step();
-    const next = Math.round(this.value()) + (dir * increment);
+    const next = Math.round(this.value()) + dir * increment;
     const clamped = Math.max(this.min(), Math.min(this.max(), next));
 
     this.valueChange.emit(clamped);

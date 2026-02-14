@@ -2,8 +2,13 @@
   <div class="toc-toolbar">
     <div class="checkbox-wrapper master-checkbox" title="Toggle All">
       @let ts = state.tocToggleState();
-      <input type="checkbox" [checked]="ts.checked" [indeterminate]="ts.indeterminate" [disabled]="!ts.hasItems"
-        (change)="state.toggleAllFilteredCategories()" id="toc-master-check" />
+      <input
+        type="checkbox"
+        [checked]="ts.checked"
+        [indeterminate]="ts.indeterminate"
+        [disabled]="!ts.hasItems"
+        (change)="state.toggleAllFilteredCategories()"
+        id="toc-master-check" />
       <label for="toc-master-check">Categories</label>
     </div>
 
@@ -11,29 +16,34 @@
       @let stats = state.tocTotals();
       <div class="toc-badges">
         @if (state.searchQuery()) {
-        <span class="badge badge-filtered" title="Total matches">
-          <app-icon name="search" [size]="10" [strokeWidth]="3" />
-          {{stats.filtered}}
-        </span>
+          <span class="badge badge-filtered" title="Total matches">
+            <app-icon name="search" [size]="10" [strokeWidth]="3" />
+            {{ stats.filtered }}
+          </span>
         }
 
-        <span class="badge badge-visible" [class.dimmed]="stats.visible === 0" title="Total visible events">
+        <span
+          class="badge badge-visible"
+          [class.dimmed]="stats.visible === 0"
+          title="Total visible events">
           <app-icon name="eye" [size]="10" [strokeWidth]="3" />
-          {{stats.visible}}
+          {{ stats.visible }}
         </span>
 
         <span class="badge badge-total" title="Total events">
-          {{stats.total}}
+          {{ stats.total }}
         </span>
       </div>
 
-      <button class="icon-button" [class.active]="state.onlyShowVisibleInToc()"
+      <button
+        class="icon-button"
+        [class.active]="state.onlyShowVisibleInToc()"
         (click)="state.setOnlyShowVisibleInToc(!state.onlyShowVisibleInToc())"
         title="Hide categories that are currently off-screen from this list">
         @if (state.onlyShowVisibleInToc()) {
-        <app-icon name="eye-off" [size]="16" />
+          <app-icon name="eye-off" [size]="16" />
         } @else {
-        <app-icon name="eye" [size]="16" />
+          <app-icon name="eye" [size]="16" />
         }
       </button>
     </div>
@@ -41,12 +51,16 @@
 
   <div class="toc-search">
     <app-icon name="search" [size]="12" class="toc-search-icon" />
-    <input type="text" placeholder="Filter categories..." class="toc-search-input" [ngModel]="state.tocFilterQuery()"
-      (ngModelChange)="state.setTocFilterQuery($event)">
+    <input
+      type="text"
+      placeholder="Filter categories..."
+      class="toc-search-input"
+      [ngModel]="state.tocFilterQuery()"
+      (ngModelChange)="state.setTocFilterQuery($event)" />
     @if (state.tocFilterQuery()) {
-    <button class="toc-search-clear" (click)="clearTocFilter()">
-      <app-icon name="x" [size]="10" [strokeWidth]="3" />
-    </button>
+      <button class="toc-search-clear" (click)="clearTocFilter()">
+        <app-icon name="x" [size]="10" [strokeWidth]="3" />
+      </button>
     }
   </div>
 </div>
@@ -54,47 +68,60 @@
 <div class="toc-container custom-scrollbar" #tocContainer>
   <ul class="toc-list">
     @for (item of state.filteredTocItems(); track item.id) {
-    @let isActive = state.activeCategoryId() === item.id;
+      @let isActive = state.activeCategoryId() === item.id;
 
-    <li class="toc-item" [attr.data-id]="item.id" [class.is-active]="isActive" [class.is-filtered]="item.isFilteredOut"
-      [class.is-off-screen]="!item.isFilteredOut && item.isOffScreen" [class.is-hidden-state]="item.isHidden">
-
-      <div class="checkbox-wrapper item-checkbox">
-        <input type="checkbox" [checked]="!item.isHidden" (change)="state.toggleCategoryVisibility(item.id)" />
-      </div>
-
-      <div class="item-content" (click)="handleItemClick(item.id)" [style.border-left-color]="getItemBorderColor(item)"
-        [style.color]="item.color">
-        <span class="toc-name">{{ item.name }}</span>
-
-        <div class="toc-badges">
-          @if (state.searchQuery()) {
-          <span class="badge badge-filtered" title="Matches search query">
-            <app-icon name="search" [size]="10" [strokeWidth]="3" />
-            {{item.countFiltered}}
-          </span>
-          }
-
-          <span class="badge badge-visible" [class.dimmed]="item.countVisible === 0" title="Visible on screen">
-            <app-icon name="eye" [size]="10" [strokeWidth]="3" />
-            {{item.countVisible}}
-          </span>
-
-          <span class="badge badge-total" title="Total events">
-            {{item.countTotal}}
-          </span>
+      <li
+        class="toc-item"
+        [attr.data-id]="item.id"
+        [class.is-active]="isActive"
+        [class.is-filtered]="item.isFilteredOut"
+        [class.is-off-screen]="!item.isFilteredOut && item.isOffScreen"
+        [class.is-hidden-state]="item.isHidden">
+        <div class="checkbox-wrapper item-checkbox">
+          <input
+            type="checkbox"
+            [checked]="!item.isHidden"
+            (change)="state.toggleCategoryVisibility(item.id)" />
         </div>
-      </div>
-    </li>
+
+        <div
+          class="item-content"
+          (click)="handleItemClick(item.id)"
+          [style.border-left-color]="getItemBorderColor(item)"
+          [style.color]="item.color">
+          <span class="toc-name">{{ item.name }}</span>
+
+          <div class="toc-badges">
+            @if (state.searchQuery()) {
+              <span class="badge badge-filtered" title="Matches search query">
+                <app-icon name="search" [size]="10" [strokeWidth]="3" />
+                {{ item.countFiltered }}
+              </span>
+            }
+
+            <span
+              class="badge badge-visible"
+              [class.dimmed]="item.countVisible === 0"
+              title="Visible on screen">
+              <app-icon name="eye" [size]="10" [strokeWidth]="3" />
+              {{ item.countVisible }}
+            </span>
+
+            <span class="badge badge-total" title="Total events">
+              {{ item.countTotal }}
+            </span>
+          </div>
+        </div>
+      </li>
     }
     @if (state.filteredTocItems().length === 0) {
-    <div class="empty-toc">
-      @if (state.tocFilterQuery()) {
-      No categories match your filter
-      } @else {
-      No categories available
-      }
-    </div>
+      <div class="empty-toc">
+        @if (state.tocFilterQuery()) {
+          No categories match your filter
+        } @else {
+          No categories available
+        }
+      </div>
     }
   </ul>
 </div>

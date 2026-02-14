@@ -1,11 +1,17 @@
-<div class="sidebar-backdrop" [attr.data-mode]="ui.sidebarMode()" (click)="ui.resetSidebarToDefault()"></div>
+<div
+  class="sidebar-backdrop"
+  [attr.data-mode]="ui.sidebarMode()"
+  (click)="ui.resetSidebarToDefault()"></div>
 
 <aside class="sidebar-container" [attr.data-mode]="ui.sidebarMode()">
   <div class="sidebar-tabs">
     @for (tab of tabs; track tab.id) {
-    <button class="tab-button" [class.active]="ui.activeSidebarTab() === tab.id" (click)="ui.setActiveTab(tab.id)">
-      {{ tab.label }}
-    </button>
+      <button
+        class="tab-button"
+        [class.active]="ui.activeSidebarTab() === tab.id"
+        (click)="ui.setActiveTab(tab.id)">
+        {{ tab.label }}
+      </button>
     }
   </div>
 

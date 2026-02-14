@@ -2,11 +2,14 @@
   <div class="toggle-text">
     <span class="toggle-title">{{ label() }}</span>
     @if (description()) {
-    <span class="toggle-desc">{{ description() }}</span>
+      <span class="toggle-desc">{{ description() }}</span>
     }
   </div>
   <div class="toggle-switch">
-    <input type="checkbox" [ngModel]="value()" (ngModelChange)="valueChange.emit($event)" />
+    <input
+      type="checkbox"
+      [ngModel]="value()"
+      (ngModelChange)="valueChange.emit($event)" />
     <span class="slider"></span>
   </div>
 </label>

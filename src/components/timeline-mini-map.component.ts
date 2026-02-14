@@ -1,4 +1,11 @@
-import { Component, inject, computed, ElementRef, viewChild, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  ElementRef,
+  viewChild,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineStateService } from '../services/timeline-state.service';
@@ -23,15 +30,23 @@ interface DensityBar {
 
 @Component({
   selector: 'app-timeline-mini-map',
-  imports: [CommonModule, FormsModule, IconComponent, YearFormatPipe, NumberInputComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    YearFormatPipe,
+    NumberInputComponent,
+  ],
   templateUrl: './timeline-mini-map.component.html',
-  styleUrls: ['./timeline-mini-map.component.css']
+  styleUrls: ['./timeline-mini-map.component.css'],
 })
 export class TimelineMiniMapComponent {
   state = inject(TimelineStateService);
 
-  readonly containerRef = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
-  readonly contentRef = viewChild.required<ElementRef<HTMLDivElement>>('contentLayer');
+  readonly containerRef =
+    viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
+  readonly contentRef =
+    viewChild.required<ElementRef<HTMLDivElement>>('contentLayer');
 
   readonly isDragging = signal<boolean>(false);
   readonly dragMode = signal<'start' | 'end' | 'pan' | 'create' | null>(null);
@@ -86,7 +101,7 @@ export class TimelineMiniMapComponent {
         matchHeight: matchH,
         hasMatch: matchH > 0,
 
-        isSearchActive
+        isSearchActive,
       });
     }
 
@@ -111,7 +126,7 @@ export class TimelineMiniMapComponent {
 
     return {
       left: startPct,
-      width: width
+      width: width,
     };
   });
 
@@ -128,7 +143,6 @@ export class TimelineMiniMapComponent {
     const pct = ((year - globalMin) / globalSpan) * 100;
     return Math.max(0, Math.min(100, pct));
   });
-
 
   updateStart(val: number) {
     const currentEnd = this.state.endYear();
@@ -259,12 +273,14 @@ export class TimelineMiniMapComponent {
       newEnd += deltaYear;
     } else if (mode === 'start') {
       newStart += deltaYear;
-      if (newStart > this.initialEndYear - minGap) newStart = this.initialEndYear - minGap;
+      if (newStart > this.initialEndYear - minGap)
+        newStart = this.initialEndYear - minGap;
       this.state.setRange(newStart, this.initialEndYear);
       return;
     } else if (mode === 'end') {
       newEnd += deltaYear;
-      if (newEnd < this.initialStartYear + minGap) newEnd = this.initialStartYear + minGap;
+      if (newEnd < this.initialStartYear + minGap)
+        newEnd = this.initialStartYear + minGap;
       this.state.setRange(this.initialStartYear, newEnd);
       return;
     }
@@ -274,7 +290,6 @@ export class TimelineMiniMapComponent {
 
   onPointerUp(event: PointerEvent) {
     if (this.isDragging()) {
-
       if (this.dragMode() === 'create' && this.isPotentialClick) {
         this.handleBackgroundClick(event);
       }
@@ -321,6 +336,6 @@ export class TimelineMiniMapComponent {
     const ratio = x / effectiveWidth;
 
     const bounds = this.mapBounds();
-    return bounds.min + (ratio * (bounds.max - bounds.min));
+    return bounds.min + ratio * (bounds.max - bounds.min);
   }
 }

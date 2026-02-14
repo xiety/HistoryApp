@@ -7,7 +7,7 @@ import { GridLine } from '../services/timeline-geometry.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './timeline-grid.component.html',
-  styleUrls: ['./timeline-grid.component.css']
+  styleUrls: ['./timeline-grid.component.css'],
 })
 export class TimelineGridComponent {
   lines = input.required<GridLine[]>();

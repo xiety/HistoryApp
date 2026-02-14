@@ -1,7 +1,18 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import { TimelineParserService, TimelineData, CategoryData, SubcategoryData, RawEvent, CategoryInfo } from './timeline-parser.service';
-import { TimelineLayoutService, SubcategoryLayout, CategoryLayout } from './timeline-layout.service';
+import {
+  TimelineParserService,
+  TimelineData,
+  CategoryData,
+  SubcategoryData,
+  RawEvent,
+  CategoryInfo,
+} from './timeline-parser.service';
+import {
+  TimelineLayoutService,
+  SubcategoryLayout,
+  CategoryLayout,
+} from './timeline-layout.service';
 import { TimelineConfigService } from './timeline-config.service';
 import { TimelineSearchService } from './timeline-search.service';
 import { TimelineGeometryService } from './timeline-geometry.service';
@@ -32,7 +43,7 @@ export interface TocToggleState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineStateService {
   private parser = inject(TimelineParserService);
@@ -76,13 +87,19 @@ export class TimelineStateService {
 
   readonly dataBounds = computed(() => ({
     min: this.parsedData().minYear,
-    max: this.parsedData().maxYear
+    max: this.parsedData().maxYear,
   }));
 
-  readonly layoutWidth = computed(() => Math.max(10, this.containerWidth() - this.config.viewPaddingRight()));
+  readonly layoutWidth = computed(() =>
+    Math.max(10, this.containerWidth() - this.config.viewPaddingRight()),
+  );
 
   readonly pixelsPerYear = computed(() => {
-    return this.geometry.calculatePixelsPerYear(this.layoutWidth(), this.startYear(), this.endYear());
+    return this.geometry.calculatePixelsPerYear(
+      this.layoutWidth(),
+      this.startYear(),
+      this.endYear(),
+    );
   });
 
   private readonly activeData = computed<TimelineData>(() => {
@@ -93,15 +110,15 @@ export class TimelineStateService {
     const ppy = this.pixelsPerYear();
     if (ppy <= 0) return data;
 
-    const categories: CategoryData[] = data.categories.map(cat => ({
+    const categories: CategoryData[] = data.categories.map((cat) => ({
       ...cat,
-      subcategories: cat.subcategories.map(sub => ({
+      subcategories: cat.subcategories.map((sub) => ({
         ...sub,
-        events: sub.events.filter(evt => {
+        events: sub.events.filter((evt) => {
           const dur = Math.max(1, evt.end - evt.start);
-          return (dur * ppy) >= 2;
-        })
-      }))
+          return dur * ppy >= 2;
+        }),
+      })),
     }));
     return { ...data, categories };
   });
@@ -110,12 +127,19 @@ export class TimelineStateService {
     return this.search.buildSearchIndex(this.activeData(), this.searchQuery());
   });
 
-  readonly matchingEventIds = computed(() => this.searchIndex()?.matches ?? null);
+  readonly matchingEventIds = computed(
+    () => this.searchIndex()?.matches ?? null,
+  );
   readonly matchCount = computed(() => this.matchingEventIds()?.size ?? 0);
   readonly matchingBounds = computed(() => this.searchIndex()?.bounds ?? null);
 
   readonly gridLines = computed(() =>
-    this.geometry.generateGridLines(this.startYear(), this.endYear(), this.layoutWidth(), this.config.minGridGap())
+    this.geometry.generateGridLines(
+      this.startYear(),
+      this.endYear(),
+      this.layoutWidth(),
+      this.config.minGridGap(),
+    ),
   );
 
   readonly renderableData = computed<TimelineData>(() => {
@@ -136,7 +160,7 @@ export class TimelineStateService {
       for (const sub of cat.subcategories) {
         let events = sub.events;
         if (filter && isSearch) {
-          events = events.filter(evt => matches.has(evt.id));
+          events = events.filter((evt) => matches.has(evt.id));
         }
         if (events.length > 0) {
           subcategories.push({ ...sub, events });
@@ -159,7 +183,7 @@ export class TimelineStateService {
       if (subcategories.length > 0) categories.push({ ...cat, subcategories });
     }
     return { ...data, categories };
-  };
+  }
 
   readonly processedLayout = computed<CategoryLayout[]>(() => {
     const data = this.renderableData();
@@ -169,16 +193,33 @@ export class TimelineStateService {
     const showLegends = this.showLegends();
     const compactMode = this.compactMode();
 
-    const rawCategories = data.categories.flatMap(cat => {
+    const rawCategories = data.categories.flatMap((cat) => {
       const sublayouts: SubcategoryLayout[] = [];
       for (const sub of cat.subcategories) {
-        const res = this.layout.computeLayout(sub.events, width, start, end, showLegends, compactMode);
+        const res = this.layout.computeLayout(
+          sub.events,
+          width,
+          start,
+          end,
+          showLegends,
+          compactMode,
+        );
         if (res.rowCount > 0) {
           sublayouts.push({ id: sub.id, name: sub.name, y: 0, ...res });
         }
       }
-      return sublayouts.length > 0 ?
-        [{ id: cat.id, name: cat.name, color: cat.color, subcategories: sublayouts, y: 0, height: 0 }] : [];
+      return sublayouts.length > 0
+        ? [
+            {
+              id: cat.id,
+              name: cat.name,
+              color: cat.color,
+              subcategories: sublayouts,
+              y: 0,
+              height: 0,
+            },
+          ]
+        : [];
     });
     return this.layout.computeVerticalPositions(rawCategories);
   });
@@ -207,7 +248,11 @@ export class TimelineStateService {
   });
 
   readonly densityData = computed<DensityData>(() => {
-    return this.search.computeDensity(this.renderableData(), this.dataBounds(), this.matchingEventIds());
+    return this.search.computeDensity(
+      this.renderableData(),
+      this.dataBounds(),
+      this.matchingEventIds(),
+    );
   });
 
   readonly tocItems = computed<TocItem[]>(() => {
@@ -222,7 +267,10 @@ export class TimelineStateService {
     const data = this.activeData();
 
     for (const cat of data.categories) {
-      let cTotal = 0, cFiltered = 0, cVisible = 0, cPotential = 0;
+      let cTotal = 0,
+        cFiltered = 0,
+        cVisible = 0,
+        cPotential = 0;
       const isCatHidden = hidden.has(cat.id);
       for (const sub of cat.subcategories) {
         for (const evt of sub.events) {
@@ -254,7 +302,7 @@ export class TimelineStateService {
         isVisibleVertically: visibleVertically.has(cat.id),
         countTotal: cTotal,
         countFiltered: cFiltered,
-        countVisible: cVisible
+        countVisible: cVisible,
       });
     }
     return items;
@@ -264,43 +312,74 @@ export class TimelineStateService {
     const items = this.tocItems();
     const query = this.tocFilterQuery().trim().toLowerCase();
     if (!query) return items;
-    return items.filter(item => item.name.toLowerCase().includes(query));
+    return items.filter((item) => item.name.toLowerCase().includes(query));
   });
 
   readonly tocToggleState = computed<TocToggleState>(() => {
     const items = this.filteredTocItems();
     const count = items.length;
-    if (count === 0) return { checked: false, indeterminate: false, hasItems: false };
-    const checkedCount = items.filter(i => !i.isHidden).length;
-    return { checked: checkedCount === count, indeterminate: checkedCount > 0 && checkedCount < count, hasItems: true };
+    if (count === 0)
+      return { checked: false, indeterminate: false, hasItems: false };
+    const checkedCount = items.filter((i) => !i.isHidden).length;
+    return {
+      checked: checkedCount === count,
+      indeterminate: checkedCount > 0 && checkedCount < count,
+      hasItems: true,
+    };
   });
 
   readonly tocTotals = computed(() => {
     const items = this.tocItems();
-    return items.reduce((acc, item) => ({
-      total: acc.total + item.countTotal,
-      filtered: acc.filtered + item.countFiltered,
-      visible: acc.visible + item.countVisible,
-      checkedCategories: acc.checkedCategories + (item.isHidden ? 0 : 1),
-      totalCategories: items.length
-    }), { total: 0, filtered: 0, visible: 0, checkedCategories: 0, totalCategories: items.length });
+    return items.reduce(
+      (acc, item) => ({
+        total: acc.total + item.countTotal,
+        filtered: acc.filtered + item.countFiltered,
+        visible: acc.visible + item.countVisible,
+        checkedCategories: acc.checkedCategories + (item.isHidden ? 0 : 1),
+        totalCategories: items.length,
+      }),
+      {
+        total: 0,
+        filtered: 0,
+        visible: 0,
+        checkedCategories: 0,
+        totalCategories: items.length,
+      },
+    );
   });
 
   getGroupCategories(groupId: number): CategoryInfo[] {
     return this.activeData().groupCategories.get(groupId) || [];
   }
 
-  setText(text: string) { this.inputText.set(text); this.clearEventSelection(); }
-  setRange(start: number, end: number) { this.startYear.set(start); this.endYear.set(end); }
-  setContainerWidth(width: number) { this.containerWidth.set(width); }
-  setActiveCategory(id: number | null) { this.activeCategoryId.set(id); }
-  setTocFilterQuery(query: string) { this.tocFilterQuery.set(query); }
+  setText(text: string) {
+    this.inputText.set(text);
+    this.clearEventSelection();
+  }
+  setRange(start: number, end: number) {
+    this.startYear.set(start);
+    this.endYear.set(end);
+  }
+  setContainerWidth(width: number) {
+    this.containerWidth.set(width);
+  }
+  setActiveCategory(id: number | null) {
+    this.activeCategoryId.set(id);
+  }
+  setTocFilterQuery(query: string) {
+    this.tocFilterQuery.set(query);
+  }
   setVisibleCategoryIds(ids: Set<number>) {
     const prev = this.visibleCategoryIds();
-    if (prev.size !== ids.size || [...ids].some(id => !prev.has(id))) this.visibleCategoryIds.set(ids);
+    if (prev.size !== ids.size || [...ids].some((id) => !prev.has(id)))
+      this.visibleCategoryIds.set(ids);
   }
-  setHoveredYear(year: number | null) { this.hoveredYear.set(year); }
-  setPersistentMarker(year: number | null) { this.persistentMarkerYear.set(year); }
+  setHoveredYear(year: number | null) {
+    this.hoveredYear.set(year);
+  }
+  setPersistentMarker(year: number | null) {
+    this.persistentMarkerYear.set(year);
+  }
 
   toggleEventSelection(raw: RawEvent) {
     if (this.selectedEventId() === raw.id) this.clearEventSelection();
@@ -328,7 +407,7 @@ export class TimelineStateService {
   }
 
   toggleCategoryVisibility(id: number) {
-    this.hiddenCategoryIds.update(s => {
+    this.hiddenCategoryIds.update((s) => {
       const n = new Set(s);
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
@@ -336,7 +415,7 @@ export class TimelineStateService {
   }
 
   setCategoryVisibilityMulti(ids: Iterable<number>, visible: boolean) {
-    this.hiddenCategoryIds.update(current => {
+    this.hiddenCategoryIds.update((current) => {
       const next = new Set(current);
       for (const id of ids) {
         if (visible) next.delete(id);
@@ -351,11 +430,13 @@ export class TimelineStateService {
     if (!state.hasItems) return;
     const targetVisible = !state.checked;
     const items = this.filteredTocItems();
-    const ids = items.map(item => item.id);
+    const ids = items.map((item) => item.id);
     if (ids.length > 0) this.setCategoryVisibilityMulti(ids, targetVisible);
   }
 
-  setOnlyShowVisibleInToc(val: boolean) { this.onlyShowVisibleInToc.set(val); }
+  setOnlyShowVisibleInToc(val: boolean) {
+    this.onlyShowVisibleInToc.set(val);
+  }
 
   fitData() {
     const b = this.activeBounds();
@@ -369,7 +450,9 @@ export class TimelineStateService {
     this.highlightedCategoryId.set(id);
   }
 
-  clearHighlight() { this.highlightedCategoryId.set(null); }
+  clearHighlight() {
+    this.highlightedCategoryId.set(null);
+  }
 
   async loadFromUrl() {
     this.isLoading.set(true);
@@ -379,7 +462,10 @@ export class TimelineStateService {
       this.setText(await res.text());
       this.startYear.set(this.config.defaultStartYear);
       this.endYear.set(this.config.defaultEndYear);
-    } catch (e) { console.error(e); }
-    finally { this.isLoading.set(false); }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 }

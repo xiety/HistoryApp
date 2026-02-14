@@ -1,0 +1,13 @@
+{
+  "printWidth": 80,
+  "tabWidth": 2,
+  "overrides": [
+    {
+      "files": "*.component.html",
+      "options": {
+        "bracketSameLine": true,
+        "parser": "angular"
+      }
+    }
+  ]
+}

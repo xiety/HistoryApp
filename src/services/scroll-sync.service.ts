@@ -10,12 +10,16 @@ export interface LayoutAnchor {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ScrollSyncService {
   private config = inject(TimelineConfigService);
 
-  getAnchor(layout: CategoryLayout[], scrollTop: number, viewportHeight: number = 0): LayoutAnchor | null {
+  getAnchor(
+    layout: CategoryLayout[],
+    scrollTop: number,
+    viewportHeight: number = 0,
+  ): LayoutAnchor | null {
     const threshold = scrollTop + this.config.rulerHeight();
 
     for (const cat of layout) {
@@ -24,12 +28,12 @@ export class ScrollSyncService {
       if (cat.y > threshold + viewportHeight) break;
 
       for (const sub of cat.subcategories) {
-        if (sub.y <= threshold && (sub.y + sub.height) >= threshold) {
+        if (sub.y <= threshold && sub.y + sub.height >= threshold) {
           return {
             catId: cat.id,
             subId: sub.id,
             offset: sub.y - scrollTop,
-            catOffset: cat.y - scrollTop
+            catOffset: cat.y - scrollTop,
           };
         }
 
@@ -38,7 +42,7 @@ export class ScrollSyncService {
             catId: cat.id,
             subId: sub.id,
             offset: sub.y - scrollTop,
-            catOffset: cat.y - scrollTop
+            catOffset: cat.y - scrollTop,
           };
         }
       }
@@ -52,7 +56,7 @@ export class ScrollSyncService {
           catId: lastCat.id,
           subId: lastSub.id,
           offset: lastSub.y - scrollTop,
-          catOffset: lastCat.y - scrollTop
+          catOffset: lastCat.y - scrollTop,
         };
       }
     }
@@ -60,13 +64,16 @@ export class ScrollSyncService {
     return null;
   }
 
-  getAnchorAtY(layout: CategoryLayout[], absoluteY: number): LayoutAnchor | null {
+  getAnchorAtY(
+    layout: CategoryLayout[],
+    absoluteY: number,
+  ): LayoutAnchor | null {
     let closest: LayoutAnchor | null = null;
     let minDistance = Infinity;
 
     for (const cat of layout) {
       for (const sub of cat.subcategories) {
-        const center = sub.y + (sub.height / 2);
+        const center = sub.y + sub.height / 2;
         const dist = Math.abs(center - absoluteY);
 
         if (dist < minDistance) {
@@ -75,7 +82,7 @@ export class ScrollSyncService {
             catId: cat.id,
             subId: sub.id,
             offset: sub.y - absoluteY,
-            catOffset: cat.y - absoluteY
+            catOffset: cat.y - absoluteY,
           };
         }
       }
@@ -83,11 +90,14 @@ export class ScrollSyncService {
     return closest;
   }
 
-  restoreScrollPosition(layout: CategoryLayout[], anchor: LayoutAnchor): number | null {
-    const cat = layout.find(c => c.id === anchor.catId);
+  restoreScrollPosition(
+    layout: CategoryLayout[],
+    anchor: LayoutAnchor,
+  ): number | null {
+    const cat = layout.find((c) => c.id === anchor.catId);
     if (!cat) return null;
 
-    const sub = cat.subcategories.find(s => s.id === anchor.subId);
+    const sub = cat.subcategories.find((s) => s.id === anchor.subId);
 
     if (sub) {
       return sub.y - anchor.offset;
@@ -96,8 +106,10 @@ export class ScrollSyncService {
     return cat.y - anchor.catOffset;
   }
 
-  getCategoryBounds(layout: CategoryLayout[]): Map<number, { top: number, bottom: number; }> {
-    const map = new Map<number, { top: number, bottom: number; }>();
+  getCategoryBounds(
+    layout: CategoryLayout[],
+  ): Map<number, { top: number; bottom: number }> {
+    const map = new Map<number, { top: number; bottom: number }>();
     for (const cat of layout) {
       map.set(cat.id, { top: cat.y, bottom: cat.y + cat.height });
     }

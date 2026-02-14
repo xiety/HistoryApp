@@ -65,7 +65,7 @@ interface LayoutCandidate {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TimelineLayoutService {
   private config = inject(TimelineConfigService);
@@ -82,18 +82,38 @@ export class TimelineLayoutService {
     viewStartYear: number,
     viewEndYear: number,
     showLegends: boolean,
-    compactMode: boolean
+    compactMode: boolean,
   ): Omit<SubcategoryLayout, 'id' | 'name' | 'y'> {
-
-    const candidates = this.generateCandidates(events, containerWidth, viewStartYear, viewEndYear);
+    const candidates = this.generateCandidates(
+      events,
+      containerWidth,
+      viewStartYear,
+      viewEndYear,
+    );
 
     if (candidates.length === 0) {
-      return { rows: [], rowCount: 0, legendRows: [], legendStartY: 0, height: 0 };
+      return {
+        rows: [],
+        rowCount: 0,
+        legendRows: [],
+        legendStartY: 0,
+        height: 0,
+      };
     }
 
-    const { rows, legendCandidates } = this.packEventsToRows(candidates, containerWidth, showLegends, compactMode);
+    const { rows, legendCandidates } = this.packEventsToRows(
+      candidates,
+      containerWidth,
+      showLegends,
+      compactMode,
+    );
 
-    const legendRows = this.generateLegendLayout(legendCandidates, rows, showLegends, containerWidth);
+    const legendRows = this.generateLegendLayout(
+      legendCandidates,
+      rows,
+      showLegends,
+      containerWidth,
+    );
 
     this.postProcessVisuals(rows);
 
@@ -110,7 +130,7 @@ export class TimelineLayoutService {
 
     for (const cat of categories) {
       cat.y = currentY;
-      currentY += (catHeaderH + catMargin);
+      currentY += catHeaderH + catMargin;
 
       const subLen = cat.subcategories.length;
       for (let i = 0; i < subLen; i++) {
@@ -123,7 +143,9 @@ export class TimelineLayoutService {
 
         currentY += sub.height;
         const isLastSub = i === subLen - 1;
-        const spacerH = subMargin + ((!isLastSub && sub.legendRows.length === 0) ? subSeparator : 0);
+        const spacerH =
+          subMargin +
+          (!isLastSub && sub.legendRows.length === 0 ? subSeparator : 0);
         currentY += spacerH;
       }
       cat.height = currentY - cat.y;
@@ -135,10 +157,14 @@ export class TimelineLayoutService {
     events: RawEvent[],
     containerWidth: number,
     viewStart: number,
-    viewEnd: number
+    viewEnd: number,
   ): LayoutCandidate[] {
     const font = this.config.font();
-    const pxPerYear = this.geometry.calculatePixelsPerYear(containerWidth, viewStart, viewEnd);
+    const pxPerYear = this.geometry.calculatePixelsPerYear(
+      containerWidth,
+      viewStart,
+      viewEnd,
+    );
     const candidates: LayoutCandidate[] = [];
 
     for (const raw of events) {
@@ -154,7 +180,13 @@ export class TimelineLayoutService {
 
       if (visualEnd < viewStart || visualStart > viewEnd) continue;
 
-      const geo = this.geometry.calculateEventGeometry(visualStart, visualEnd, viewStart, containerWidth, pxPerYear);
+      const geo = this.geometry.calculateEventGeometry(
+        visualStart,
+        visualEnd,
+        viewStart,
+        containerWidth,
+        pxPerYear,
+      );
 
       candidates.push({
         raw,
@@ -163,7 +195,7 @@ export class TimelineLayoutService {
         visualWidth: geo.visualWidth,
         clippedLeft: geo.clippedLeft,
         clippedRight: geo.clippedRight,
-        nameWidth: this.textMeasure.getTextWidth(raw.name, font)
+        nameWidth: this.textMeasure.getTextWidth(raw.name, font),
       });
     }
 
@@ -174,7 +206,12 @@ export class TimelineLayoutService {
     });
   }
 
-  private packEventsToRows(candidates: LayoutCandidate[], containerWidth: number, showLegends: boolean, compactMode: boolean) {
+  private packEventsToRows(
+    candidates: LayoutCandidate[],
+    containerWidth: number,
+    showLegends: boolean,
+    compactMode: boolean,
+  ) {
     const rows: RenderEvent[][] = [];
     const legendCandidates: RenderEvent[] = [];
     const minEventGap = this.config.minEventGap();
@@ -185,7 +222,17 @@ export class TimelineLayoutService {
       let placed = false;
 
       for (let r = 0; r < rows.length; r++) {
-        if (this.canPlaceInRow(event, rows[r], minEventGap, templateWidth, legendCandidates, showLegends, compactMode)) {
+        if (
+          this.canPlaceInRow(
+            event,
+            rows[r],
+            minEventGap,
+            templateWidth,
+            legendCandidates,
+            showLegends,
+            compactMode,
+          )
+        ) {
           event.row = r;
           placed = true;
           break;
@@ -204,7 +251,8 @@ export class TimelineLayoutService {
     for (const row of rows) {
       if (row.length > 0) {
         const last = row[row.length - 1];
-        last.safeWidth = (containerWidth - last.x - sidePadding) + viewPaddingRight;
+        last.safeWidth =
+          containerWidth - last.x - sidePadding + viewPaddingRight;
       }
     }
 
@@ -218,7 +266,7 @@ export class TimelineLayoutService {
     templateWidth: number,
     legendCandidates: RenderEvent[],
     showLegends: boolean,
-    compactMode: boolean
+    compactMode: boolean,
   ): boolean {
     const last = row[row.length - 1];
 
@@ -238,7 +286,8 @@ export class TimelineLayoutService {
           last.legendId = -1;
           legendCandidates.push(last);
         }
-        last.displayMode = templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
+        last.displayMode =
+          templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
       }
       row.push(event);
       return true;
@@ -256,7 +305,8 @@ export class TimelineLayoutService {
           last.legendId = -1;
           legendCandidates.push(last);
         }
-        last.displayMode = templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
+        last.displayMode =
+          templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
         row.push(event);
         return true;
       }
@@ -267,13 +317,20 @@ export class TimelineLayoutService {
 
   private calculateLegendTemplateWidth(count: number): number {
     const digits = count > 0 ? String(count).length : 1;
-    const templateString = "0".repeat(digits);
-    return this.textMeasure.getTextWidth(templateString, this.config.font()) + this.config.textPadding();
+    const templateString = '0'.repeat(digits);
+    return (
+      this.textMeasure.getTextWidth(templateString, this.config.font()) +
+      this.config.textPadding()
+    );
   }
 
-  private createRenderEvent(candidate: LayoutCandidate, containerWidth: number): RenderEvent {
+  private createRenderEvent(
+    candidate: LayoutCandidate,
+    containerWidth: number,
+  ): RenderEvent {
     const neededForFull = candidate.nameWidth + this.config.textPadding();
-    const initialMode = (neededForFull <= candidate.visualWidth) ? 'full' : 'overflow';
+    const initialMode =
+      neededForFull <= candidate.visualWidth ? 'full' : 'overflow';
 
     return {
       legendId: 0,
@@ -291,11 +348,16 @@ export class TimelineLayoutService {
       safeWidth: candidate.visualWidth,
       contentWidth: 0,
       needsMask: false,
-      hasRightBorder: true
+      hasRightBorder: true,
     };
   }
 
-  private generateLegendLayout(legendCandidates: RenderEvent[], rows: RenderEvent[][], showLegends: boolean, containerWidth: number): LegendItem[][] {
+  private generateLegendLayout(
+    legendCandidates: RenderEvent[],
+    rows: RenderEvent[][],
+    showLegends: boolean,
+    containerWidth: number,
+  ): LegendItem[][] {
     if (!showLegends || legendCandidates.length === 0) return [];
 
     legendCandidates.sort((a, b) => {
@@ -321,7 +383,7 @@ export class TimelineLayoutService {
             xPct: (ev.x / containerWidth) * 100,
             widthPct: (w / containerWidth) * 100,
             row: -1,
-            text
+            text,
           });
         }
       }
@@ -337,7 +399,7 @@ export class TimelineLayoutService {
       for (let r = 0; r < legendRows.length; r++) {
         const row = legendRows[r];
         const last = row[row.length - 1];
-        if (!last || (item.x >= last.x + last.width + itemGap)) {
+        if (!last || item.x >= last.x + last.width + itemGap) {
           item.row = r;
           row.push(item);
           placed = true;
@@ -362,31 +424,41 @@ export class TimelineLayoutService {
         let contentWidth = paddingLeft;
         if (event.legendId > 0) {
           const idStr = String(event.legendId);
-          contentWidth += this.textMeasure.getTextWidth(idStr, this.config.font()) + legendGap;
+          contentWidth +=
+            this.textMeasure.getTextWidth(idStr, this.config.font()) +
+            legendGap;
         }
         contentWidth += event.nameWidth;
         event.contentWidth = contentWidth;
-        event.needsMask = contentWidth > (event.safeWidth + 1);
+        event.needsMask = contentWidth > event.safeWidth + 1;
 
-        const textOverflowsBar = contentWidth > (event.visualWidth + 1);
-        const hasFreeSpace = (event.safeWidth - event.visualWidth) > 2;
-        event.hasRightBorder = !(event.clippedRight || (textOverflowsBar && hasFreeSpace));
+        const textOverflowsBar = contentWidth > event.visualWidth + 1;
+        const hasFreeSpace = event.safeWidth - event.visualWidth > 2;
+        event.hasRightBorder = !(
+          event.clippedRight ||
+          (textOverflowsBar && hasFreeSpace)
+        );
       }
     }
   }
 
-  private calculateLayoutMetrics(rows: RenderEvent[][], legendRows: LegendItem[][]) {
+  private calculateLayoutMetrics(
+    rows: RenderEvent[][],
+    legendRows: LegendItem[][],
+  ) {
     const eventAreaHeight = rows.length * this.config.rowTotalHeight();
     const legendAreaHeight = legendRows.length * this.config.legendRowHeight();
-    const padding = legendRows.length > 0 ? this.config.legendBlockPadding() : 0;
-    const bottomPadding = legendRows.length > 0 ? this.config.legendBottomPadding() : 0;
+    const padding =
+      legendRows.length > 0 ? this.config.legendBlockPadding() : 0;
+    const bottomPadding =
+      legendRows.length > 0 ? this.config.legendBottomPadding() : 0;
 
     return {
       rows,
       rowCount: rows.length,
       legendRows,
       legendStartY: eventAreaHeight + padding,
-      height: eventAreaHeight + padding + legendAreaHeight + bottomPadding
+      height: eventAreaHeight + padding + legendAreaHeight + bottomPadding,
     };
   }
 }

@@ -10,7 +10,7 @@ import { TimelineCategoryComponent } from './timeline-category.component';
   standalone: true,
   imports: [CommonModule, TimelineGridComponent, TimelineCategoryComponent],
   templateUrl: './timeline-view.component.html',
-  styleUrls: ['./timeline-view.component.css']
+  styleUrls: ['./timeline-view.component.css'],
 })
 export class TimelineViewComponent {
   state = inject(TimelineStateService);

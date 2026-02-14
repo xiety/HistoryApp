@@ -9,9 +9,14 @@ import { SettingToggleComponent } from './setting-toggle.component';
 @Component({
   selector: 'app-timeline-setup',
   standalone: true,
-  imports: [CommonModule, FormsModule, NumberInputComponent, SettingToggleComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    NumberInputComponent,
+    SettingToggleComponent,
+  ],
   templateUrl: './timeline-setup.component.html',
-  styleUrls: ['./timeline-setup.component.css']
+  styleUrls: ['./timeline-setup.component.css'],
 })
 export class TimelineSetupComponent {
   state = inject(TimelineStateService);

@@ -1,20 +1,25 @@
-<main class="timeline-view-wrapper" appTimelineInteractions [scrollContainer]="scrollContainer">
-
+<main
+  class="timeline-view-wrapper"
+  appTimelineInteractions
+  [scrollContainer]="scrollContainer">
   <div class="guides-layer" [style.width.px]="state.layoutWidth()">
     @let pGuideX = persistentGuideX();
     @if (pGuideX !== null) {
-    <div class="persistent-guide-line" [style.left.%]="pGuideX"></div>
+      <div class="persistent-guide-line" [style.left.%]="pGuideX"></div>
     }
 
     @let guideX = cursorGuideX();
     @if (guideX !== null) {
-    <div class="cursor-guide-line" [style.left.%]="guideX"></div>
+      <div class="cursor-guide-line" [style.left.%]="guideX"></div>
     }
   </div>
 
   <app-timeline-ruler></app-timeline-ruler>
 
-  <div class="scroll-area custom-scrollbar" #scrollContainer (scroll)="onScroll()">
+  <div
+    class="scroll-area custom-scrollbar"
+    #scrollContainer
+    (scroll)="onScroll()">
     <app-timeline-view></app-timeline-view>
   </div>
 </main>

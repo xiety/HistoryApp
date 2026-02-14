@@ -4,7 +4,10 @@ import { TimelineEditorComponent } from './timeline-editor.component';
 import { TimelineTocComponent } from './timeline-toc.component';
 import { TimelineSetupComponent } from './timeline-setup.component';
 import { TimelineStateService } from '../services/timeline-state.service';
-import { TimelineUiStateService, SidebarTab } from '../services/timeline-ui-state.service';
+import {
+  TimelineUiStateService,
+  SidebarTab,
+} from '../services/timeline-ui-state.service';
 
 interface TabDefinition {
   id: SidebarTab;
@@ -17,7 +20,7 @@ interface TabDefinition {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './timeline-sidebar.component.html',
-  styleUrls: ['./timeline-sidebar.component.css']
+  styleUrls: ['./timeline-sidebar.component.css'],
 })
 export class TimelineSidebarComponent {
   state = inject(TimelineStateService);
@@ -26,12 +29,12 @@ export class TimelineSidebarComponent {
   readonly tabs: TabDefinition[] = [
     { id: 'editor', label: 'Data', component: TimelineEditorComponent },
     { id: 'toc', label: 'TOC', component: TimelineTocComponent },
-    { id: 'setup', label: 'Setup', component: TimelineSetupComponent }
+    { id: 'setup', label: 'Setup', component: TimelineSetupComponent },
   ];
 
   readonly activeComponent = computed(() => {
     const activeId = this.ui.activeSidebarTab();
-    const tab = this.tabs.find(t => t.id === activeId);
+    const tab = this.tabs.find((t) => t.id === activeId);
     return tab ? tab.component : TimelineEditorComponent;
   });
 }

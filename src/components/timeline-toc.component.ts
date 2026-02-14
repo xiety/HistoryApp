@@ -1,7 +1,16 @@
-import { Component, inject, viewChild, ElementRef, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  viewChild,
+  ElementRef,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TimelineStateService, TocItem } from '../services/timeline-state.service';
+import {
+  TimelineStateService,
+  TocItem,
+} from '../services/timeline-state.service';
 import { TimelineUiStateService } from '../services/timeline-ui-state.service';
 import { IconComponent } from './icon.component';
 
@@ -9,13 +18,14 @@ import { IconComponent } from './icon.component';
   selector: 'app-timeline-toc',
   imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './timeline-toc.component.html',
-  styleUrls: ['./timeline-toc.component.css']
+  styleUrls: ['./timeline-toc.component.css'],
 })
 export class TimelineTocComponent {
   state = inject(TimelineStateService);
   ui = inject(TimelineUiStateService);
 
-  readonly containerRef = viewChild.required<ElementRef<HTMLElement>>('tocContainer');
+  readonly containerRef =
+    viewChild.required<ElementRef<HTMLElement>>('tocContainer');
 
   constructor() {
     effect(() => {

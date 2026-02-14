@@ -11,7 +11,7 @@ export function formatYear(year: number | null | undefined): string {
 
 @Pipe({
   name: 'yearFormat',
-  standalone: true
+  standalone: true,
 })
 export class YearFormatPipe implements PipeTransform {
   transform(value: number | null | undefined): string {
