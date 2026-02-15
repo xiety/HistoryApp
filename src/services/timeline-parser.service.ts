@@ -8,6 +8,7 @@ export interface RawEvent {
   start: number;
   end: number;
   lineNumber: number;
+  isOngoing: boolean;
 }
 
 export interface SubcategoryData {
@@ -43,6 +44,7 @@ export interface TimelineData {
   errors: TimelineError[];
   minYear: number;
   maxYear: number;
+  lineToEventsMap: Map<number, RawEvent[]>;
 }
 
 interface Target {
@@ -53,12 +55,26 @@ interface Target {
 interface DateRange {
   start: number;
   end: number;
+  isOngoing: boolean;
 }
 
 interface EventOccurrence {
   line: number;
   years: string;
   context: string;
+}
+
+interface ParsingContext {
+  categories: CategoryData[];
+  groupCategories: Map<number, CategoryInfo[]>;
+  errors: TimelineError[];
+  currentTargets: Target[];
+  minYear: number;
+  maxYear: number;
+  hasEvents: boolean;
+  headerMap: Map<string, number[]>;
+  eventMap: Map<string, EventOccurrence[]>;
+  lineToEventsMap: Map<number, RawEvent[]>;
 }
 
 @Injectable({
@@ -68,7 +84,7 @@ export class TimelineParserService {
   private readonly HEADER_REGEX = /^#\s*(.+)$/;
   private readonly CAT_WITH_SUB_REGEX = /^(.+?)\s*\((.+)\)$/;
   private readonly MULTI_RANGE_REGEX =
-    /^(.+) ((?:\d+(?: BCE)?(?:-\d+(?: BCE)?)?(?:, ?)?)+)$/;
+    /^(.+) ((?:\d+(?: BCE)?(?:-(?:\d+(?: BCE)?)?)?(?:, ?)?)+)$/;
   private readonly BCE_SUFFIX = ' BCE';
 
   private nextId = 0;
@@ -78,16 +94,17 @@ export class TimelineParserService {
     this.nextId = 0;
     this.groupIdCounter = 0;
 
-    const context = {
-      categories: [] as CategoryData[],
-      groupCategories: new Map<number, CategoryInfo[]>(),
-      errors: [] as TimelineError[],
-      currentTargets: [] as Target[],
+    const context: ParsingContext = {
+      categories: [],
+      groupCategories: new Map(),
+      errors: [],
+      currentTargets: [],
       minYear: Infinity,
       maxYear: -Infinity,
       hasEvents: false,
-      headerMap: new Map<string, number[]>(),
-      eventMap: new Map<string, EventOccurrence[]>(),
+      headerMap: new Map(),
+      eventMap: new Map(),
+      lineToEventsMap: new Map(),
     };
 
     const lines = text.split(/\r?\n/);
@@ -107,87 +124,93 @@ export class TimelineParserService {
       errors: context.errors,
       minYear: context.hasEvents ? context.minYear : 0,
       maxYear: context.hasEvents ? context.maxYear : 0,
+      lineToEventsMap: context.lineToEventsMap,
     };
   }
 
-  private processLine(line: string, lineIndex: number, ctx: any) {
+  private processLine(line: string, lineIndex: number, ctx: ParsingContext) {
     const trimmed = line.trim();
     if (!trimmed) return;
 
     if (trimmed.startsWith('#')) {
-      const headerContent = trimmed.substring(1).trim();
-
-      if (!ctx.headerMap.has(headerContent))
-        ctx.headerMap.set(headerContent, []);
-      ctx.headerMap.get(headerContent).push(lineIndex);
-
-      const targets = this.parseHeader(trimmed);
-      if (targets.length > 0) {
-        ctx.currentTargets = targets;
-      } else {
-        ctx.errors.push({
-          line: lineIndex,
-          content: trimmed,
-          message: 'Invalid header format',
-          type: 'error',
-        });
-      }
-      return;
-    }
-
-    const match = trimmed.match(this.MULTI_RANGE_REGEX);
-    if (match) {
-      if (ctx.currentTargets.length === 0) {
-        ctx.errors.push({
-          line: lineIndex,
-          content: trimmed,
-          message: 'Event defined before any Category header',
-          type: 'error',
-        });
-        return;
-      }
-
-      const name = match[1].trim();
-      const rangesPart = match[2].trim();
-
-      if (!ctx.eventMap.has(name)) ctx.eventMap.set(name, []);
-
-      const contextStr = ctx.currentTargets
-        .map((t: Target) =>
-          t.subcategory ? `${t.category} (${t.subcategory})` : t.category,
-        )
-        .join(', ');
-
-      ctx.eventMap.get(name).push({
+      this.processHeader(trimmed, lineIndex, ctx);
+    } else if (this.MULTI_RANGE_REGEX.test(trimmed)) {
+      this.processEvent(trimmed, lineIndex, ctx);
+    } else {
+      ctx.errors.push({
         line: lineIndex,
-        years: rangesPart,
-        context: contextStr,
+        content: trimmed,
+        message: 'Unrecognized format',
+        type: 'error',
       });
-
-      const ranges = this.parseDateString(rangesPart);
-
-      if (ranges.length > 0) {
-        this.createEvents(name, ranges, lineIndex, ctx);
-      } else {
-        ctx.errors.push({
-          line: lineIndex,
-          content: trimmed,
-          message: 'Could not parse date range',
-          type: 'error',
-        });
-      }
-      return;
     }
-
-    ctx.errors.push({
-      line: lineIndex,
-      content: trimmed,
-      message: 'Unrecognized format',
-      type: 'error',
-    });
   }
 
-  private checkDuplicates(ctx: any) {
+  private processHeader(line: string, lineIndex: number, ctx: ParsingContext) {
+    const headerContent = line.substring(1).trim();
+
+    if (!ctx.headerMap.has(headerContent)) ctx.headerMap.set(headerContent, []);
+    ctx.headerMap.get(headerContent)!.push(lineIndex);
+
+    const targets = this.parseHeader(line);
+    if (targets.length > 0) {
+      ctx.currentTargets = targets;
+    } else {
+      ctx.errors.push({
+        line: lineIndex,
+        content: line,
+        message: 'Invalid header format',
+        type: 'error',
+      });
+    }
+  }
+
+  private processEvent(line: string, lineIndex: number, ctx: ParsingContext) {
+    const match = line.match(this.MULTI_RANGE_REGEX);
+    if (!match) return;
+
+    if (ctx.currentTargets.length === 0) {
+      ctx.errors.push({
+        line: lineIndex,
+        content: line,
+        message: 'Event defined before any Category header',
+        type: 'error',
+      });
+      return;
+    }
+
+    const name = match[1].trim();
+    const rangesPart = match[2].trim();
+
+    if (!ctx.eventMap.has(name)) ctx.eventMap.set(name, []);
+
+    const contextStr = ctx.currentTargets
+      .map((t: Target) =>
+        t.subcategory ? `${t.category} (${t.subcategory})` : t.category,
+      )
+      .join(', ');
+
+    ctx.eventMap.get(name)!.push({
+      line: lineIndex,
+      years: rangesPart,
+      context: contextStr,
+    });
+
+    const ranges = this.parseDateString(rangesPart);
+
+    if (ranges.length > 0) {
+      this.createEvents(name, ranges, lineIndex, ctx);
+    } else {
+      ctx.errors.push({
+        line: lineIndex,
+        content: line,
+        message: 'Could not parse date range',
+        type: 'error',
+      });
+    }
+  }
+
+  private checkDuplicates(ctx: ParsingContext) {
     ctx.headerMap.forEach((lines: number[], content: string) => {
       if (lines.length > 1) {
         lines.forEach((line) => {
@@ -220,7 +243,7 @@ export class TimelineParserService {
     name: string,
     ranges: DateRange[],
     lineIndex: number,
-    ctx: any,
+    ctx: ParsingContext,
   ) {
     const groupId = ++this.groupIdCounter;
     ctx.hasEvents = true;
@@ -241,14 +264,22 @@ export class TimelineParserService {
         const cat = this.ensureCategory(target.category, ctx.categories);
         const sub = this.ensureSubcategory(cat, target.subcategory);
 
-        sub.events.push({
+        const rawEvent: RawEvent = {
           id: ++this.nextId,
           groupId,
           name,
           start: range.start,
           end: range.end,
           lineNumber: lineIndex,
-        });
+          isOngoing: range.isOngoing,
+        };
+
+        if (!ctx.lineToEventsMap.has(lineIndex)) {
+          ctx.lineToEventsMap.set(lineIndex, []);
+        }
+        ctx.lineToEventsMap.get(lineIndex)!.push(rawEvent);
+
+        sub.events.push(rawEvent);
       }
     }
   }
@@ -330,12 +361,24 @@ export class TimelineParserService {
   }
 
   private parseDateString(dateStr: string): DateRange[] {
+    const currentYear = new Date().getFullYear();
     return dateStr.split(',').map((part) => {
       const rangeParts = part.trim().split('-');
       const start = this.parseYear(rangeParts[0].trim());
-      const end =
-        rangeParts.length > 1 ? this.parseYear(rangeParts[1].trim()) : start;
-      return { start, end };
+      let end = start;
+      let isOngoing = false;
+
+      if (rangeParts.length > 1) {
+        const endPart = rangeParts[1].trim();
+        if (endPart === '') {
+          end = currentYear;
+          isOngoing = true;
+        } else {
+          end = this.parseYear(endPart);
+        }
+      }
+
+      return { start, end, isOngoing };
     });
   }
 

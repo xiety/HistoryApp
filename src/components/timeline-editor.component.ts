@@ -56,6 +56,21 @@ export class TimelineEditorComponent {
     );
   });
 
+  readonly eventsOnCurrentLine = computed(() =>
+    this.state.eventsOnEditorLine(),
+  );
+  readonly currentLineEventCount = computed(
+    () => this.eventsOnCurrentLine().length,
+  );
+
+  readonly currentEventIndex = computed(() => {
+    const events = this.eventsOnCurrentLine();
+    const currentId = this.state.selectedEventId();
+    if (events.length === 0 || currentId === null) return 0;
+    const idx = events.findIndex((e) => e.id === currentId);
+    return idx >= 0 ? idx + 1 : 0;
+  });
+
   constructor() {
     effect(() => {
       const line = this.state.selectedEventLine();
@@ -80,6 +95,39 @@ export class TimelineEditorComponent {
     this.scrollToLine(lineIndex);
   }
 
+  updateCursor(event: Event) {
+    const el = event.target as HTMLTextAreaElement;
+    const val = el.value;
+    const sel = el.selectionStart;
+
+    const line = val.substring(0, sel).split('\n').length - 1;
+
+    if (this.state.editorLineNumber() !== line) {
+      this.state.setEditorLineNumber(line);
+    }
+  }
+
+  navigateEvents(dir: number) {
+    const events = this.eventsOnCurrentLine();
+    if (events.length === 0) return;
+
+    const currentId = this.state.selectedEventId();
+    const currentIdx = events.findIndex((e) => e.id === currentId);
+
+    let newIdx = 0;
+
+    if (currentIdx === -1) {
+      newIdx = 0;
+    } else {
+      const len = events.length;
+      newIdx = (currentIdx + dir) % len;
+      if (newIdx < 0) newIdx += len;
+    }
+
+    const target = events[newIdx];
+    this.state.navigateToEvent(target);
+  }
+
   private scrollToLine(lineIndex: number) {
     const el = this.editorInput().nativeElement;
     const text = el.value;
@@ -101,5 +149,7 @@ export class TimelineEditorComponent {
     el.scrollTop = Math.max(0, lineIndex * lineHeight - el.clientHeight / 2);
 
     el.scrollLeft = 0;
+
+    this.state.setEditorLineNumber(lineIndex);
   }
 }

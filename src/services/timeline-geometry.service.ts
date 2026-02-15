@@ -3,14 +3,13 @@ import { TimelineConfigService } from './timeline-config.service';
 
 export interface GridLine {
   x: number;
-  xPct: number;
   label: number;
   isMajor: boolean;
 }
 
 export interface GeometryResult {
   x: number;
-  width: number;
+  layoutWidth: number;
   visualWidth: number;
   clippedLeft: boolean;
   clippedRight: boolean;
@@ -20,38 +19,46 @@ export interface GeometryResult {
   providedIn: 'root',
 })
 export class TimelineGeometryService {
-  private config = inject(TimelineConfigService);
+  private readonly config = inject(TimelineConfigService);
+
+  getRatio(value: number, min: number, max: number): number {
+    const span = max - min;
+    if (span <= 0) return 0;
+    return (value - min) / span;
+  }
+
+  getValueFromRatio(ratio: number, min: number, max: number): number {
+    return min + ratio * (max - min);
+  }
 
   calculatePixelsPerYear(width: number, start: number, end: number): number {
     const span = end - start;
     if (span <= 0) return 0;
-    const sidePadding = this.config.sidePadding();
-    const effectiveWidth = Math.max(1, width - 2 * sidePadding);
+    const effectiveWidth = Math.max(1, width);
     return effectiveWidth / span;
   }
 
-  calculateXPosition(
+  yearToPixel(year: number, start: number, end: number, width: number): number {
+    const pxPerYear = this.calculatePixelsPerYear(width, start, end);
+    if (pxPerYear <= 0) return width / 2;
+    return (year - start) * pxPerYear;
+  }
+
+  pixelToYear(x: number, start: number, end: number, width: number): number {
+    const pxPerYear = this.calculatePixelsPerYear(width, start, end);
+    if (pxPerYear <= 0) return start;
+    return start + x / pxPerYear;
+  }
+
+  yearToPercentage(
     year: number,
     start: number,
     end: number,
     width: number,
-  ): number {
-    const pxPerYear = this.calculatePixelsPerYear(width, start, end);
-    if (pxPerYear <= 0) return width / 2;
-    const sidePadding = this.config.sidePadding();
-    return sidePadding + (year - start) * pxPerYear;
-  }
-
-  calculateYearFromX(
-    x: number,
-    start: number,
-    end: number,
-    width: number,
-  ): number {
-    const pxPerYear = this.calculatePixelsPerYear(width, start, end);
-    if (pxPerYear <= 0) return start;
-    const sidePadding = this.config.sidePadding();
-    return start + (x - sidePadding) / pxPerYear;
+  ): number | null {
+    const x = this.yearToPixel(year, start, end, width);
+    if (x < -100 || x > width + 100) return null;
+    return (x / width) * 100;
   }
 
   calculateEventGeometry(
@@ -61,10 +68,9 @@ export class TimelineGeometryService {
     width: number,
     pixelsPerYear: number,
   ): GeometryResult {
-    const sidePadding = this.config.sidePadding();
     const durationYears = Math.max(1, visualEnd - visualStart);
 
-    const rawStartX = sidePadding + (visualStart - viewStart) * pixelsPerYear;
+    const rawStartX = (visualStart - viewStart) * pixelsPerYear;
     const rawEndX = rawStartX + durationYears * pixelsPerYear;
 
     let x = Math.round(rawStartX);
@@ -75,24 +81,23 @@ export class TimelineGeometryService {
 
     let clippedLeft = false;
     let clippedRight = false;
-    const rightEdge = width;
 
     if (x < 0) {
-      w -= 0 - x;
+      w += x;
       x = 0;
       clippedLeft = true;
     }
 
-    if (x + w > rightEdge) {
-      w = rightEdge - x;
+    if (x + w > width) {
+      w = width - x;
       clippedRight = true;
     }
 
     if (w < 1) w = 1;
 
-    const visualWidth = clippedRight ? w : w > 1 ? w - 1 : w;
+    const visualWidth = w > 1 ? w - 1 : w;
 
-    return { x, width: w, visualWidth, clippedLeft, clippedRight };
+    return { x, layoutWidth: w, visualWidth, clippedLeft, clippedRight };
   }
 
   generateGridLines(
@@ -127,11 +132,11 @@ export class TimelineGeometryService {
     const renderMargin = 200;
 
     for (let year = firstTick; year <= end + epsilon; year += step) {
-      const x = this.calculateXPosition(year, start, end, width);
-      if (x > -renderMargin && x <= width + epsilon) {
+      const x = this.yearToPixel(year, start, end, width);
+
+      if (x > -renderMargin && x <= width + renderMargin) {
         lines.push({
           x,
-          xPct: (x / width) * 100,
           label: year,
           isMajor: Math.abs(year % 100) < epsilon,
         });

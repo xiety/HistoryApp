@@ -9,6 +9,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { TimelineGeometryService } from '../services/timeline-geometry.service';
 import { IconComponent } from './icon.component';
 import { YearFormatPipe } from '../pipes/year-format.pipe';
 import { NumberInputComponent } from './number-input.component';
@@ -16,15 +17,12 @@ import { NumberInputComponent } from './number-input.component';
 interface DensityBar {
   x: number;
   width: number;
-
   dimmedY: number;
   dimmedHeight: number;
   hasDimmed: boolean;
-
   matchY: number;
   matchHeight: number;
   hasMatch: boolean;
-
   isSearchActive: boolean;
 }
 
@@ -42,6 +40,7 @@ interface DensityBar {
 })
 export class TimelineMiniMapComponent {
   state = inject(TimelineStateService);
+  private geometry = inject(TimelineGeometryService);
 
   readonly containerRef =
     viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
@@ -54,8 +53,7 @@ export class TimelineMiniMapComponent {
 
   private dragStartX = 0;
   private dragAnchorYear = 0;
-  private initialStartYear = 0;
-  private initialEndYear = 0;
+  private initialRange = { start: 0, end: 0 };
 
   private isPotentialClick = false;
   private readonly CLICK_THRESHOLD = 5;
@@ -63,104 +61,72 @@ export class TimelineMiniMapComponent {
   readonly mapBounds = computed(() => this.state.dataBounds());
 
   readonly densityBars = computed<DensityBar[]>(() => {
-    const data = this.state.densityData();
-    const count = data.total.length;
+    const { total, matching } = this.state.densityData();
+    const count = total.length;
     if (count === 0) return [];
 
     const barWidth = 100 / count;
-    const isSearchActive = !!data.matching;
+    const isSearchActive = matching !== null;
 
-    const bars: DensityBar[] = [];
+    return total
+      .map((normVal, i) => {
+        if (normVal <= 0) return null;
 
-    for (let i = 0; i < count; i++) {
-      const totalNorm = data.total[i];
-      if (totalNorm <= 0) continue;
+        const totalH = normVal * 100;
+        const matchH = matching
+          ? Math.max(matching[i] * 100, matching[i] > 0 ? 4 : 0)
+          : 0;
+        const dimmedH = Math.max(0, totalH - matchH);
+        const visualTotalH = dimmedH + matchH;
 
-      const rawTotalH = totalNorm * 100;
-      const rawMatchH = (data.matching ? data.matching[i] : 0) * 100;
-
-      const matchH = rawMatchH > 0 ? Math.max(rawMatchH, 4) : 0;
-
-      const calcDimmed = rawTotalH - matchH;
-      const dimmedH = Math.max(0, calcDimmed);
-
-      const visualTotalH = dimmedH + matchH;
-
-      const dimmedY = 100 - dimmedH;
-      const matchY = 100 - visualTotalH;
-
-      bars.push({
-        x: i * barWidth,
-        width: barWidth,
-
-        dimmedY,
-        dimmedHeight: dimmedH,
-        hasDimmed: dimmedH > 0,
-
-        matchY,
-        matchHeight: matchH,
-        hasMatch: matchH > 0,
-
-        isSearchActive,
-      });
-    }
-
-    return bars;
+        return {
+          x: i * barWidth,
+          width: barWidth,
+          dimmedY: 100 - dimmedH,
+          dimmedHeight: dimmedH,
+          hasDimmed: dimmedH > 0,
+          matchY: 100 - visualTotalH,
+          matchHeight: matchH,
+          hasMatch: matchH > 0,
+          isSearchActive,
+        };
+      })
+      .filter((bar): bar is DensityBar => bar !== null);
   });
 
   readonly rangePercent = computed(() => {
-    const globalMin = this.mapBounds().min;
-    const globalMax = this.mapBounds().max;
-    const globalSpan = globalMax - globalMin;
+    const { min, max } = this.mapBounds();
+    const startRatio = this.geometry.getRatio(this.state.startYear(), min, max);
+    const endRatio = this.geometry.getRatio(this.state.endYear(), min, max);
 
-    if (globalSpan <= 0) return { left: 0, width: 100 };
-
-    const currentStart = this.state.startYear();
-    const currentEnd = this.state.endYear();
-
-    const startPct = ((currentStart - globalMin) / globalSpan) * 100;
-    const endPct = ((currentEnd - globalMin) / globalSpan) * 100;
-
-    const rawWidth = endPct - startPct;
-    const width = Math.max(0, rawWidth);
+    const startPct = startRatio * 100;
+    const endPct = endRatio * 100;
 
     return {
       left: startPct,
-      width: width,
+      width: Math.max(0, endPct - startPct),
     };
   });
 
   readonly hoverXPercent = computed(() => {
     const year = this.hoverYear();
     if (year === null) return null;
-
-    const globalMin = this.mapBounds().min;
-    const globalMax = this.mapBounds().max;
-    const globalSpan = globalMax - globalMin;
-
-    if (globalSpan <= 0) return 50;
-
-    const pct = ((year - globalMin) / globalSpan) * 100;
-    return Math.max(0, Math.min(100, pct));
+    const { min, max } = this.mapBounds();
+    const ratio = this.geometry.getRatio(year, min, max);
+    return Math.max(0, Math.min(100, ratio * 100));
   });
 
   updateStart(val: number) {
-    const currentEnd = this.state.endYear();
-    const minGap = 1;
-
-    if (val >= currentEnd) {
-      this.state.setRange(val, val + minGap);
+    if (val >= this.state.endYear()) {
+      this.state.setRange(val, val + 1);
     } else {
       this.state.startYear.set(val);
     }
   }
 
   updateEnd(val: number) {
-    const currentStart = this.state.startYear();
-    const minGap = 1;
-
-    if (val <= currentStart) {
-      this.state.setRange(val - minGap, val);
+    if (val <= this.state.startYear()) {
+      this.state.setRange(val - 1, val);
     } else {
       this.state.endYear.set(val);
     }
@@ -169,28 +135,21 @@ export class TimelineMiniMapComponent {
   shiftRange(direction: -1 | 1, event: MouseEvent) {
     const step = event.shiftKey ? 10 : 1;
     const change = direction * step;
-
-    let newStart = this.state.startYear() + change;
-    let newEnd = this.state.endYear() + change;
-
-    this.state.setRange(newStart, newEnd);
+    this.state.setRange(
+      this.state.startYear() + change,
+      this.state.endYear() + change,
+    );
   }
 
   jumpTo(target: 'start' | 'end') {
-    const bounds = this.mapBounds();
+    const { min, max } = this.mapBounds();
     const currentSpan = this.state.endYear() - this.state.startYear();
 
-    let newStart, newEnd;
-
     if (target === 'start') {
-      newStart = bounds.min;
-      newEnd = bounds.min + currentSpan;
+      this.state.setRange(min, min + currentSpan);
     } else {
-      newEnd = bounds.max;
-      newStart = bounds.max - currentSpan;
+      this.state.setRange(max - currentSpan, max);
     }
-
-    this.state.setRange(newStart, newEnd);
   }
 
   onPointerDown(event: PointerEvent, mode: 'start' | 'end' | 'pan' | 'create') {
@@ -202,90 +161,41 @@ export class TimelineMiniMapComponent {
 
     this.isDragging.set(true);
     this.state.isMinimapInteracting.set(true);
+    this.state.isContentManipulation.set(true);
 
     this.dragMode.set(mode);
     this.dragStartX = event.clientX;
-    this.initialStartYear = this.state.startYear();
-    this.initialEndYear = this.state.endYear();
+    this.initialRange = {
+      start: this.state.startYear(),
+      end: this.state.endYear(),
+    };
 
     if (mode === 'create') {
       this.isPotentialClick = true;
-      const year = this.getYearFromEvent(event);
-      this.dragAnchorYear = year;
+      this.dragAnchorYear = this.getYearFromEvent(event);
     } else {
       this.isPotentialClick = false;
     }
   }
 
   onPointerMove(event: PointerEvent) {
-    const globalMin = this.mapBounds().min;
-    const globalMax = this.mapBounds().max;
-    const span = globalMax - globalMin;
-
-    const hoverY = this.getYearFromEvent(event);
-    this.hoverYear.set(hoverY);
+    this.hoverYear.set(this.getYearFromEvent(event));
 
     if (!this.isDragging()) return;
-
-    const mode = this.dragMode();
-    if (!mode) return;
 
     event.preventDefault();
     event.stopPropagation();
 
+    const { min, max } = this.mapBounds();
+    const span = max - min;
     if (span <= 0) return;
 
+    const mode = this.dragMode();
     if (mode === 'create') {
-      if (this.isPotentialClick) {
-        const dist = Math.abs(event.clientX - this.dragStartX);
-        if (dist > this.CLICK_THRESHOLD) {
-          this.isPotentialClick = false;
-        } else {
-          return;
-        }
-      }
-
-      const currentYear = this.getYearFromEvent(event);
-      const s = Math.min(this.dragAnchorYear, currentYear);
-      const e = Math.max(this.dragAnchorYear, currentYear);
-
-      const finalS = Math.max(globalMin, s);
-      const finalE = Math.min(globalMax, Math.max(finalS + 1, e));
-
-      this.state.setRange(finalS, finalE);
-      return;
+      this.handleCreation(event);
+    } else {
+      this.handleManipulation(event, span, mode);
     }
-
-    const content = this.contentRef().nativeElement;
-    const rect = content.getBoundingClientRect();
-
-    const effectiveWidth = Math.max(1, rect.width);
-    const pxPerYear = effectiveWidth / span;
-    const deltaPx = event.clientX - this.dragStartX;
-    const deltaYear = deltaPx / pxPerYear;
-
-    let newStart = this.initialStartYear;
-    let newEnd = this.initialEndYear;
-    const minGap = 1;
-
-    if (mode === 'pan') {
-      newStart += deltaYear;
-      newEnd += deltaYear;
-    } else if (mode === 'start') {
-      newStart += deltaYear;
-      if (newStart > this.initialEndYear - minGap)
-        newStart = this.initialEndYear - minGap;
-      this.state.setRange(newStart, this.initialEndYear);
-      return;
-    } else if (mode === 'end') {
-      newEnd += deltaYear;
-      if (newEnd < this.initialStartYear + minGap)
-        newEnd = this.initialStartYear + minGap;
-      this.state.setRange(this.initialStartYear, newEnd);
-      return;
-    }
-
-    this.state.setRange(newStart, newEnd);
   }
 
   onPointerUp(event: PointerEvent) {
@@ -296,28 +206,15 @@ export class TimelineMiniMapComponent {
 
       this.isDragging.set(false);
       this.state.isMinimapInteracting.set(false);
-
+      this.state.isContentManipulation.set(false);
       this.dragMode.set(null);
       this.isPotentialClick = false;
 
       const target = event.target as HTMLElement;
-
       if (target.hasPointerCapture(event.pointerId)) {
         target.releasePointerCapture(event.pointerId);
       }
     }
-  }
-
-  private handleBackgroundClick(event: PointerEvent) {
-    const clickYear = this.getYearFromEvent(event);
-
-    const currentSpan = this.state.endYear() - this.state.startYear();
-    const halfSpan = currentSpan / 2;
-
-    const newStart = clickYear - halfSpan;
-    const newEnd = clickYear + halfSpan;
-
-    this.state.setRange(newStart, newEnd);
   }
 
   onPointerLeave() {
@@ -326,16 +223,56 @@ export class TimelineMiniMapComponent {
     }
   }
 
-  private getYearFromEvent(event: PointerEvent): number {
+  private handleCreation(event: PointerEvent) {
+    if (this.isPotentialClick) {
+      if (Math.abs(event.clientX - this.dragStartX) > this.CLICK_THRESHOLD) {
+        this.isPotentialClick = false;
+      } else {
+        return;
+      }
+    }
+
+    const currentYear = this.getYearFromEvent(event);
+    const { min, max } = this.mapBounds();
+    const s = Math.min(this.dragAnchorYear, currentYear);
+    const e = Math.max(this.dragAnchorYear, currentYear);
+
+    this.state.setRange(Math.max(min, s), Math.min(max, Math.max(s + 1, e)));
+  }
+
+  private handleManipulation(
+    event: PointerEvent,
+    span: number,
+    mode: 'start' | 'end' | 'pan' | null,
+  ) {
     const content = this.contentRef().nativeElement;
+    const effectiveWidth = Math.max(1, content.getBoundingClientRect().width);
+    const pxPerYear = effectiveWidth / span;
+    const deltaYear = (event.clientX - this.dragStartX) / pxPerYear;
+    const minGap = 1;
 
-    const rect = content.getBoundingClientRect();
+    let { start, end } = this.initialRange;
+
+    if (mode === 'pan' || mode === 'start') start += deltaYear;
+    if (mode === 'pan' || mode === 'end') end += deltaYear;
+
+    if (mode === 'start') start = Math.min(start, end - minGap);
+    if (mode === 'end') end = Math.max(end, start + minGap);
+
+    this.state.setRange(start, end);
+  }
+
+  private handleBackgroundClick(event: PointerEvent) {
+    const clickYear = this.getYearFromEvent(event);
+    const halfSpan = (this.state.endYear() - this.state.startYear()) / 2;
+    this.state.setRange(clickYear - halfSpan, clickYear + halfSpan);
+  }
+
+  private getYearFromEvent(event: PointerEvent): number {
+    const rect = this.contentRef().nativeElement.getBoundingClientRect();
     const effectiveWidth = Math.max(1, rect.width);
-
-    const x = event.clientX - rect.left;
-    const ratio = x / effectiveWidth;
-
-    const bounds = this.mapBounds();
-    return bounds.min + ratio * (bounds.max - bounds.min);
+    const ratio = (event.clientX - rect.left) / effectiveWidth;
+    const { min, max } = this.mapBounds();
+    return this.geometry.getValueFromRatio(ratio, min, max);
   }
 }

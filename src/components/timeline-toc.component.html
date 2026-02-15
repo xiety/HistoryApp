@@ -87,8 +87,7 @@
         <div
           class="item-content"
           (click)="handleItemClick(item.id)"
-          [style.border-left-color]="getItemBorderColor(item)"
-          [style.color]="item.color">
+          [ngStyle]="getItemStyle(item)">
           <span class="toc-name">{{ item.name }}</span>
 
           <div class="toc-badges">

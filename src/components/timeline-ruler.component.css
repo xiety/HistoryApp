@@ -7,13 +7,13 @@
 
 .ruler-bar {
   background: white;
-  border-bottom: 1px solid #cbd5e1;
   position: relative;
 }
 
 .ruler-canvas {
   position: relative;
   height: 100%;
+  width: 100%;
   cursor: pointer;
   overflow: visible;
 }
@@ -68,7 +68,7 @@
   font-size: 1em;
   font-weight: bold;
   padding: 0.1em 0.4em;
-  border-radius: 4px;
+  border-radius: 3px;
 
   transform-origin: left bottom;
   margin-left: 4px;
@@ -94,7 +94,7 @@
   font-size: 1em;
   font-weight: bold;
   padding: 0.1em 0.4em;
-  border-radius: 4px;
+  border-radius: 3px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   cursor: pointer;

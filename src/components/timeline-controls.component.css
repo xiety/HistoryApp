@@ -71,7 +71,6 @@
   color: #64748b;
   height: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 0;
 
   &:hover {
     background-color: #f1f5f9;
@@ -214,7 +213,6 @@
   cursor: pointer;
   user-select: none;
   padding: 0 12px;
-  border-radius: 0;
   transition: background-color 0.1s;
   height: 100%;
   flex-shrink: 0;

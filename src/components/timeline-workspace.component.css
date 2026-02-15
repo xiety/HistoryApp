@@ -11,7 +11,7 @@
   flex-direction: column;
   background-color: #ffffff;
   overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   cursor: default;
   user-select: none;
 
@@ -21,13 +21,34 @@
   }
 }
 
+.ruler-container {
+  flex: none;
+  overflow: hidden;
+  background-color: white;
+  z-index: 130;
+  border-bottom: 1px solid #cbd5e1;
+
+  scrollbar-gutter: stable;
+}
+
 .scroll-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   overflow-anchor: none;
-  touch-action: none;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+}
+
+@supports not (scrollbar-gutter: stable) {
+  .scroll-area {
+    overflow-y: scroll;
+  }
+
+  .ruler-container {
+    overflow-y: scroll;
+  }
 }
 
 .scroll-area::-webkit-scrollbar {
@@ -93,10 +114,15 @@
     overflow: visible !important;
   }
 
+  .ruler-container,
   .scroll-area {
     display: block !important;
     height: auto !important;
     overflow: visible !important;
+  }
+
+  .ruler-container {
+    border-bottom: none;
   }
 
   .guides-layer {

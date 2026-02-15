@@ -46,11 +46,11 @@ export interface TocToggleState {
   providedIn: 'root',
 })
 export class TimelineStateService {
-  private parser = inject(TimelineParserService);
-  private layout = inject(TimelineLayoutService);
-  private config = inject(TimelineConfigService);
-  private search = inject(TimelineSearchService);
-  private geometry = inject(TimelineGeometryService);
+  private readonly parser = inject(TimelineParserService);
+  private readonly layout = inject(TimelineLayoutService);
+  private readonly config = inject(TimelineConfigService);
+  private readonly search = inject(TimelineSearchService);
+  private readonly geometry = inject(TimelineGeometryService);
 
   private readonly _scrollTo$ = new Subject<number>();
   readonly scrollTo$ = this._scrollTo$.asObservable();
@@ -68,6 +68,10 @@ export class TimelineStateService {
   readonly selectedEventId = signal<number | null>(null);
   readonly selectedGroupId = signal<number | null>(null);
   readonly selectedEventLine = signal<number | null>(null);
+
+  readonly selectionPulse = signal<number>(0);
+  readonly categoryPulse = signal<number>(0);
+
   readonly hoveredEventId = signal<number | null>(null);
   readonly hoveredGroupId = signal<number | null>(null);
   readonly searchQuery = signal<string>('');
@@ -79,13 +83,28 @@ export class TimelineStateService {
   readonly hiddenCategoryIds = signal<Set<number>>(new Set());
   readonly onlyShowVisibleInToc = signal<boolean>(false);
   readonly isHoverDetailsSuppressed = signal<boolean>(false);
+
   readonly isUserInteracting = signal<boolean>(false);
+  readonly isContentManipulation = signal<boolean>(false);
+
   readonly isMinimapInteracting = signal<boolean>(false);
   readonly tocFilterQuery = signal<string>('');
+
+  readonly anchoredSubcategoryId = signal<number | null>(null);
+
+  readonly editorLineNumber = signal<number | null>(null);
+
+  readonly pendingScrollToEventId = signal<number | null>(null);
 
   readonly parsedData = computed(() => this.parser.parse(this.inputText()));
 
   readonly parsingErrors = computed(() => this.parsedData().errors);
+
+  readonly eventsOnEditorLine = computed(() => {
+    const line = this.editorLineNumber();
+    if (line === null) return [];
+    return this.parsedData().lineToEventsMap.get(line) || [];
+  });
 
   readonly dataBounds = computed(() => ({
     min: this.parsedData().minYear,
@@ -149,21 +168,25 @@ export class TimelineStateService {
     const hidden = this.hiddenCategoryIds();
     const filter = this.isFilterMode();
     const matches = this.matchingEventIds();
-    const isSearch = !!matches;
+    const isSearch = matches !== null;
 
-    if (!filter && hidden.size === 0) {
-      return this.cleanEmptyData(data);
+    if (!filter || !isSearch) {
+      if (hidden.size === 0) return data;
+      return {
+        ...data,
+        categories: data.categories.filter((c) => !hidden.has(c.id)),
+      };
     }
 
     const categories: CategoryData[] = [];
+
     for (const cat of data.categories) {
       if (hidden.has(cat.id)) continue;
+
       const subcategories: SubcategoryData[] = [];
       for (const sub of cat.subcategories) {
-        let events = sub.events;
-        if (filter && isSearch) {
-          events = events.filter((evt) => matches.has(evt.id));
-        }
+        const events = sub.events.filter((evt) => matches.has(evt.id));
+
         if (events.length > 0) {
           subcategories.push({ ...sub, events });
         }
@@ -175,18 +198,6 @@ export class TimelineStateService {
     return { ...data, categories };
   });
 
-  private cleanEmptyData(data: TimelineData): TimelineData {
-    const categories: CategoryData[] = [];
-    for (const cat of data.categories) {
-      const subcategories: SubcategoryData[] = [];
-      for (const sub of cat.subcategories) {
-        if (sub.events.length > 0) subcategories.push(sub);
-      }
-      if (subcategories.length > 0) categories.push({ ...cat, subcategories });
-    }
-    return { ...data, categories };
-  }
-
   readonly processedLayout = computed<CategoryLayout[]>(() => {
     const data = this.renderableData();
     const width = this.layoutWidth();
@@ -197,6 +208,7 @@ export class TimelineStateService {
 
     const rawCategories = data.categories.flatMap((cat) => {
       const sublayouts: SubcategoryLayout[] = [];
+
       for (const sub of cat.subcategories) {
         const res = this.layout.computeLayout(
           sub.events,
@@ -206,30 +218,40 @@ export class TimelineStateService {
           showLegends,
           compactMode,
         );
+
         if (res.rowCount > 0) {
-          sublayouts.push({ id: sub.id, name: sub.name, y: 0, ...res });
+          sublayouts.push({
+            id: sub.id,
+            name: sub.name,
+            y: 0,
+            totalHeight: 0,
+            ...res,
+          });
         }
       }
-      return sublayouts.length > 0
-        ? [
-            {
-              id: cat.id,
-              name: cat.name,
-              color: cat.color,
-              subcategories: sublayouts,
-              y: 0,
-              height: 0,
-            },
-          ]
-        : [];
+
+      if (sublayouts.length > 0) {
+        return [
+          {
+            id: cat.id,
+            name: cat.name,
+            color: cat.color,
+            subcategories: sublayouts,
+            y: 0,
+            height: 0,
+          },
+        ];
+      }
+      return [];
     });
+
     return this.layout.computeVerticalPositions(rawCategories);
   });
 
   readonly activeBounds = computed(() => {
     const hidden = this.hiddenCategoryIds();
     const matches = this.matchingEventIds();
-    const isSearch = !!matches;
+    const isSearch = matches !== null;
     let min = Infinity;
     let max = -Infinity;
     let found = false;
@@ -261,7 +283,7 @@ export class TimelineStateService {
     const hidden = this.hiddenCategoryIds();
     const visibleVertically = this.visibleCategoryIds();
     const matches = this.matchingEventIds();
-    const isSearch = !!matches;
+    const isSearch = matches !== null;
     const sYear = this.startYear();
     const eYear = this.endYear();
     const items: TocItem[] = [];
@@ -362,6 +384,7 @@ export class TimelineStateService {
     this.startYear.set(start);
     this.endYear.set(end);
   }
+
   setContainerWidth(width: number) {
     this.containerWidth.set(width);
   }
@@ -382,14 +405,33 @@ export class TimelineStateService {
   setPersistentMarker(year: number | null) {
     this.persistentMarkerYear.set(year);
   }
+  setEditorLineNumber(line: number | null) {
+    this.editorLineNumber.set(line);
+  }
 
   toggleEventSelection(raw: RawEvent) {
-    if (this.selectedEventId() === raw.id) this.clearEventSelection();
-    else {
-      this.selectedEventId.set(raw.id);
-      this.selectedGroupId.set(raw.groupId);
-      this.selectedEventLine.set(raw.lineNumber);
+    if (this.selectedEventId() === raw.id) {
+      this.clearEventSelection();
+    } else {
+      this.selectEvent(raw, 'user');
     }
+  }
+
+  selectEvent(raw: RawEvent, origin: 'user' | 'programmatic' = 'user') {
+    this.selectedEventId.set(raw.id);
+    this.selectedGroupId.set(raw.groupId);
+    this.selectedEventLine.set(raw.lineNumber);
+
+    if (origin === 'programmatic') {
+      this.selectionPulse.update((n) => n + 1);
+    }
+  }
+
+  navigateToEvent(event: RawEvent) {
+    const span = this.endYear() - this.startYear();
+    this.setRange(event.start, event.start + span);
+    this.selectEvent(event, 'programmatic');
+    this.pendingScrollToEventId.set(event.id);
   }
 
   clearEventSelection() {
@@ -450,10 +492,7 @@ export class TimelineStateService {
   requestScrollToCategory(id: number) {
     this._scrollTo$.next(id);
     this.highlightedCategoryId.set(id);
-  }
-
-  clearHighlight() {
-    this.highlightedCategoryId.set(null);
+    this.categoryPulse.update((n) => n + 1);
   }
 
   async loadFromUrl() {

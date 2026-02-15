@@ -1,88 +1,81 @@
 <div
   class="timeline-event"
+  [class]="animation.pulseClass()"
   [class.selected]="isSelected()"
   [class.is-hovered]="isHovered()"
   [class.instance-active]="isActive()"
   [class.is-dimmed]="isDimmed()"
   [attr.title]="tooltip()"
-  [style.left.%]="data().xPct"
-  [style.width.%]="data().widthPct"
+  [style.left.px]="data().x"
+  [style.width.px]="data().visualWidth"
   [style.top.px]="top()"
   [style.height.px]="height()"
   (click)="onClick($event)"
   (mouseenter)="onMouseEnter($event)"
-  (mouseleave)="onMouseLeave()">
+  (mouseleave)="onMouseLeave()"
+  (animationend)="animation.onAnimationEnd()">
   <div class="interaction-layer">
-    @if (asRenderEvent(); as ev) {
+    @if (type() === "event") {
+      @let e = ev();
       <div
         class="event-bg"
         [class.is-single-year]="isSingleYear()"
-        [class.no-border-left]="ev.clippedLeft"
-        [class.no-border-right]="!ev.hasRightBorder"></div>
+        [class.is-ongoing]="isOngoing()"
+        [class.no-border-left]="e.clippedLeft"
+        [class.no-border-right]="!e.hasRightBorder"></div>
 
       <div
         class="event-label label-base"
         [class.is-active]="isActive()"
-        [class.is-legend-full]="ev.displayMode === 'legend-full'"
-        [style.maxWidth.px]="isActive() ? null : ev.safeWidth"
+        [class.is-legend-full]="e.displayMode === 'legend-full'"
+        [style.maxWidth.px]="isActive() ? null : e.safeWidth"
         [style.background-image]="gradientStyle()">
-        @if (
-          ev.displayMode === "legend-full" ||
-          ev.displayMode === "legend-overflow"
-        ) {
-          <span class="legend-id">{{ ev.legendId }}</span>
+        @if (showLegendId()) {
+          <span class="legend-id">{{ e.legendId }}</span>
         }
-        <span
-          class="event-text"
-          [class.text-fade-mask]="ev.needsMask && !isActive()">
+
+        <span class="event-text" [class.text-fade-mask]="isTextMasked()">
           {{ raw().name }}
         </span>
       </div>
 
       <div
         class="event-label label-mask"
-        [class.is-legend-full]="ev.displayMode === 'legend-full'"
+        [class.is-legend-full]="e.displayMode === 'legend-full'"
         aria-hidden="true">
-        @if (
-          ev.displayMode === "legend-full" ||
-          ev.displayMode === "legend-overflow"
-        ) {
-          <span class="legend-id">{{ ev.legendId }}</span>
+        @if (showLegendId()) {
+          <span class="legend-id">{{ e.legendId }}</span>
         }
-        <span
-          class="event-text"
-          [class.text-fade-mask]="ev.needsMask && !isActive()">
+
+        <span class="event-text" [class.text-fade-mask]="isTextMasked()">
           {{ raw().name }}
         </span>
       </div>
 
-      @let related = relatedCategories();
-      @if (related.length > 0) {
+      @if (hasRelatedDots()) {
         <div
           class="related-dots"
-          [style.maxWidth.px]="isActive() ? null : ev.safeWidth"
-          [class.text-fade-mask]="hasDotsOverflow() && !isActive()">
-          @for (cat of related; track cat.id) {
+          [style.maxWidth.px]="isActive() ? null : e.safeWidth"
+          [class.text-fade-mask]="isDotsMasked()">
+          @for (cat of relatedCategories(); track cat.id) {
             <div
               class="related-dot"
-              [style.background-color]="'hsl(' + cat.color + ')'"
-              [title]="'Also in: ' + cat.name"></div>
+              [style.background-color]="'hsl(' + cat.color + ')'"></div>
           }
         </div>
       }
     }
 
-    @if (asLegendItem(); as item) {
+    @if (type() === "legend") {
       <span class="legend-text">
-        {{ item.text }}
+        {{ item().text }}
       </span>
     }
 
     @if (isActive()) {
-      @let related = relatedCategories();
-      @if (related.length > 0) {
+      @if (hasRelatedDots()) {
         <div class="category-tag-container">
-          @for (cat of related; track cat.name) {
+          @for (cat of relatedCategories(); track cat.name) {
             <div
               class="category-mini-tag"
               [style.background-color]="'hsl(' + cat.color + ')'">
@@ -94,16 +87,20 @@
 
       <div
         class="date-tag start-tag"
-        [class.out-of-bounds]="isOutOfBounds(raw().start, 'start')">
+        [class.out-of-bounds]="isStartOutOfBounds()">
         {{ raw().start | yearFormat }}
       </div>
 
       @if (!isSingleYear()) {
-        <div
-          class="date-tag end-tag"
-          [class.out-of-bounds]="isOutOfBounds(raw().end, 'end')">
-          {{ raw().end | yearFormat }}
-        </div>
+        @if (isOngoing()) {
+          <div class="date-tag end-tag ongoing">Present</div>
+        } @else {
+          <div
+            class="date-tag end-tag"
+            [class.out-of-bounds]="isEndOutOfBounds()">
+            {{ raw().end | yearFormat }}
+          </div>
+        }
       }
     }
   </div>

@@ -59,6 +59,7 @@
   @media (min-width: 768px) {
     position: relative;
     width: 300px;
+    transition: none;
 
     &[data-mode="auto"],
     &[data-mode="visible"] {

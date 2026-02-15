@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { TimelineData } from './timeline-parser.service';
+import { TimelineData, RawEvent } from './timeline-parser.service';
 import { DensityData } from './timeline-state.service';
 
 export interface SearchResult {
@@ -11,6 +11,16 @@ export interface SearchResult {
   providedIn: 'root',
 })
 export class TimelineSearchService {
+  matchesQuery(evt: RawEvent, normalizedQuery: string): boolean {
+    if (!normalizedQuery) return true;
+
+    const nameMatch = evt.name.toLowerCase().includes(normalizedQuery);
+    const startMatch = evt.start.toString() === normalizedQuery;
+    const endMatch = evt.end.toString() === normalizedQuery;
+
+    return nameMatch || startMatch || endMatch;
+  }
+
   buildSearchIndex(data: TimelineData, query: string): SearchResult | null {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return null;
@@ -22,11 +32,7 @@ export class TimelineSearchService {
     for (const cat of data.categories) {
       for (const sub of cat.subcategories) {
         for (const evt of sub.events) {
-          const nameMatch = evt.name.toLowerCase().includes(normalizedQuery);
-          const startMatch = evt.start.toString() === normalizedQuery;
-          const endMatch = evt.end.toString() === normalizedQuery;
-
-          if (nameMatch || startMatch || endMatch) {
+          if (this.matchesQuery(evt, normalizedQuery)) {
             matches.add(evt.id);
             if (evt.start < min) min = evt.start;
             if (evt.end > max) max = evt.end;

@@ -8,10 +8,8 @@ export interface RenderEvent {
   legendId: number;
   raw: RawEvent;
   x: number;
-  width: number;
+  layoutWidth: number;
   visualWidth: number;
-  xPct: number;
-  widthPct: number;
   row: number;
   displayMode: 'full' | 'overflow' | 'legend-full' | 'legend-overflow';
   clippedLeft: boolean;
@@ -27,9 +25,8 @@ export interface LegendItem {
   legendId: number;
   raw: RawEvent;
   x: number;
-  width: number;
-  xPct: number;
-  widthPct: number;
+  layoutWidth: number;
+  visualWidth: number;
   row: number;
   text: string;
 }
@@ -41,6 +38,7 @@ export interface SubcategoryLayout {
   rowCount: number;
   legendRows: LegendItem[][];
   height: number;
+  totalHeight: number;
   legendStartY: number;
   y: number;
 }
@@ -57,7 +55,7 @@ export interface CategoryLayout {
 interface LayoutCandidate {
   raw: RawEvent;
   x: number;
-  width: number;
+  layoutWidth: number;
   visualWidth: number;
   clippedLeft: boolean;
   clippedRight: boolean;
@@ -68,13 +66,9 @@ interface LayoutCandidate {
   providedIn: 'root',
 })
 export class TimelineLayoutService {
-  private config = inject(TimelineConfigService);
-  private textMeasure = inject(TextMeasurementService);
-  private geometry = inject(TimelineGeometryService);
-
-  getSidePadding(): number {
-    return this.config.sidePadding();
-  }
+  private readonly config = inject(TimelineConfigService);
+  private readonly textMeasure = inject(TextMeasurementService);
+  private readonly geometry = inject(TimelineGeometryService);
 
   computeLayout(
     events: RawEvent[],
@@ -83,7 +77,7 @@ export class TimelineLayoutService {
     viewEndYear: number,
     showLegends: boolean,
     compactMode: boolean,
-  ): Omit<SubcategoryLayout, 'id' | 'name' | 'y'> {
+  ): Omit<SubcategoryLayout, 'id' | 'name' | 'y' | 'totalHeight'> {
     const candidates = this.generateCandidates(
       events,
       containerWidth,
@@ -137,6 +131,8 @@ export class TimelineLayoutService {
         const sub = cat.subcategories[i];
         sub.y = currentY;
 
+        const startY = currentY;
+
         if (sub.name) {
           currentY += subHeaderH;
         }
@@ -147,6 +143,8 @@ export class TimelineLayoutService {
           subMargin +
           (!isLastSub && sub.legendRows.length === 0 ? subSeparator : 0);
         currentY += spacerH;
+
+        sub.totalHeight = currentY - startY;
       }
       cat.height = currentY - cat.y;
     }
@@ -191,7 +189,7 @@ export class TimelineLayoutService {
       candidates.push({
         raw,
         x: geo.x,
-        width: geo.width,
+        layoutWidth: geo.layoutWidth,
         visualWidth: geo.visualWidth,
         clippedLeft: geo.clippedLeft,
         clippedRight: geo.clippedRight,
@@ -199,11 +197,7 @@ export class TimelineLayoutService {
       });
     }
 
-    return candidates.sort((a, b) => {
-      if (Math.abs(a.x - b.x) > 0.1) return a.x - b.x;
-      if (a.raw.start !== b.raw.start) return a.raw.start - b.raw.start;
-      return a.raw.name.localeCompare(b.raw.name);
-    });
+    return candidates;
   }
 
   private packEventsToRows(
@@ -218,7 +212,7 @@ export class TimelineLayoutService {
     const templateWidth = this.calculateLegendTemplateWidth(candidates.length);
 
     for (const candidate of candidates) {
-      const event = this.createRenderEvent(candidate, containerWidth);
+      const event = this.createRenderEvent(candidate);
       let placed = false;
 
       for (let r = 0; r < rows.length; r++) {
@@ -246,13 +240,14 @@ export class TimelineLayoutService {
       }
     }
 
-    const sidePadding = this.config.sidePadding();
     const viewPaddingRight = this.config.viewPaddingRight();
     for (const row of rows) {
       if (row.length > 0) {
         const last = row[row.length - 1];
-        last.safeWidth =
-          containerWidth - last.x - sidePadding + viewPaddingRight;
+        last.safeWidth = Math.max(
+          0,
+          containerWidth - last.x + viewPaddingRight,
+        );
       }
     }
 
@@ -270,7 +265,7 @@ export class TimelineLayoutService {
   ): boolean {
     const last = row[row.length - 1];
 
-    if (event.x < last.x + last.width + minGap - 0.001) {
+    if (event.x < last.x + last.layoutWidth + minGap - 0.001) {
       return false;
     }
 
@@ -324,10 +319,7 @@ export class TimelineLayoutService {
     );
   }
 
-  private createRenderEvent(
-    candidate: LayoutCandidate,
-    containerWidth: number,
-  ): RenderEvent {
+  private createRenderEvent(candidate: LayoutCandidate): RenderEvent {
     const neededForFull = candidate.nameWidth + this.config.textPadding();
     const initialMode =
       neededForFull <= candidate.visualWidth ? 'full' : 'overflow';
@@ -336,10 +328,8 @@ export class TimelineLayoutService {
       legendId: 0,
       raw: candidate.raw,
       x: candidate.x,
-      width: candidate.width,
+      layoutWidth: candidate.layoutWidth,
       visualWidth: candidate.visualWidth,
-      xPct: (candidate.x / containerWidth) * 100,
-      widthPct: (candidate.visualWidth / containerWidth) * 100,
       row: -1,
       displayMode: initialMode,
       clippedLeft: candidate.clippedLeft,
@@ -379,9 +369,8 @@ export class TimelineLayoutService {
             legendId: ev.legendId,
             raw: ev.raw,
             x: ev.x,
-            width: w,
-            xPct: (ev.x / containerWidth) * 100,
-            widthPct: (w / containerWidth) * 100,
+            layoutWidth: w,
+            visualWidth: w,
             row: -1,
             text,
           });
@@ -399,7 +388,7 @@ export class TimelineLayoutService {
       for (let r = 0; r < legendRows.length; r++) {
         const row = legendRows[r];
         const last = row[row.length - 1];
-        if (!last || item.x >= last.x + last.width + itemGap) {
+        if (!last || item.x >= last.x + last.layoutWidth + itemGap) {
           item.row = r;
           row.push(item);
           placed = true;
@@ -430,13 +419,14 @@ export class TimelineLayoutService {
         }
         contentWidth += event.nameWidth;
         event.contentWidth = contentWidth;
-        event.needsMask = contentWidth > event.safeWidth + 1;
+        event.needsMask = contentWidth > event.safeWidth;
 
         const textOverflowsBar = contentWidth > event.visualWidth + 1;
         const hasFreeSpace = event.safeWidth - event.visualWidth > 2;
         event.hasRightBorder = !(
           event.clippedRight ||
-          (textOverflowsBar && hasFreeSpace)
+          (textOverflowsBar && hasFreeSpace) ||
+          event.raw.isOngoing
         );
       }
     }

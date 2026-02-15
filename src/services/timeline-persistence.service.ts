@@ -9,8 +9,8 @@ import { TimelineConfigService } from './timeline-config.service';
   providedIn: 'root',
 })
 export class TimelinePersistenceService {
-  private state = inject(TimelineStateService);
-  private config = inject(TimelineConfigService);
+  private readonly state = inject(TimelineStateService);
+  private readonly config = inject(TimelineConfigService);
 
   private readonly KEY_TEXT = 'chronos-events-data';
   private readonly KEY_PREFS = 'timeline_preferences';

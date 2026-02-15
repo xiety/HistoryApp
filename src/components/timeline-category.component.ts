@@ -9,6 +9,7 @@ import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
 import { CategoryLayout } from '../services/timeline-layout.service';
 import { TimelineEventComponent } from './timeline-event.component';
+import { usePulseAnimation } from '../utils/pulse-animation';
 
 @Component({
   selector: 'app-timeline-category',
@@ -24,15 +25,20 @@ export class TimelineCategoryComponent {
 
   layout = input.required<CategoryLayout>();
 
-  getLegendBackgroundTop(subY: number, legendStartY: number): number {
-    return subY + legendStartY - this.config.legendBlockPadding();
+  readonly animation = usePulseAnimation(
+    this.state.categoryPulse,
+    () => this.state.highlightedCategoryId() === this.layout().id,
+  );
+
+  getLegendBackgroundTop(legendStartY: number): number {
+    return legendStartY - this.config.legendBlockPadding();
   }
 
-  getEventTop(subY: number, row: number): number {
-    return subY + row * this.config.rowTotalHeight();
+  getEventTop(row: number): number {
+    return row * this.config.rowTotalHeight();
   }
 
-  getLegendItemTop(subY: number, legendStartY: number, row: number): number {
-    return subY + legendStartY + row * this.config.legendRowHeight();
+  getLegendItemTop(legendStartY: number, row: number): number {
+    return legendStartY + row * this.config.legendRowHeight();
   }
 }

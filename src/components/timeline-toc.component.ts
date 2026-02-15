@@ -37,9 +37,10 @@ export class TimelineTocComponent {
   }
 
   handleItemClick(id: number) {
-    if (!this.state.hiddenCategoryIds().has(id)) {
-      this.state.requestScrollToCategory(id);
+    const isHidden = this.state.hiddenCategoryIds().has(id);
 
+    if (!isHidden) {
+      this.state.requestScrollToCategory(id);
       this.ui.resetSidebarToDefault();
     } else {
       this.state.toggleCategoryVisibility(id);
@@ -50,8 +51,13 @@ export class TimelineTocComponent {
     this.state.setTocFilterQuery('');
   }
 
-  getItemBorderColor(item: TocItem): string {
-    return item.isVisibleVertically ? item.color : 'transparent';
+  getItemStyle(item: TocItem): Record<string, any> {
+    return {
+      'border-left-color': item.isVisibleVertically
+        ? item.color
+        : 'transparent',
+      color: item.color,
+    };
   }
 
   private scrollActiveIntoView(id: number) {

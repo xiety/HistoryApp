@@ -18,6 +18,7 @@
   flex: none;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 4px 8px;
   background-color: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
@@ -27,31 +28,56 @@
   display: inline-flex;
 }
 
-.toolbar-button {
+.nav-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.nav-counter {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.editor-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: white;
   border: 1px solid #cbd5e1;
   color: #475569;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
+}
 
-  &:hover:not(:disabled) {
-    background-color: #f1f5f9;
-    color: #1e293b;
-    border-color: #94a3b8;
-  }
+.editor-toolbar button:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
+.editor-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: #f1f5f9;
+}
+
+.toolbar-button {
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.nav-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
 }
 
 .data-input-area {
@@ -106,6 +132,10 @@
   box-sizing: border-box;
 }
 
+.error-header:hover {
+  background-color: #fecdd3;
+}
+
 .error-panel.collapsed .error-header {
   border-bottom: none;
   background-color: #f1f5f9;
@@ -115,10 +145,6 @@
 .error-panel.collapsed .error-header:hover {
   background-color: #e2e8f0;
   color: #334155;
-}
-
-.error-header:hover {
-  background-color: #fecdd3;
 }
 
 .error-list {
@@ -132,11 +158,9 @@
 .error-list::-webkit-scrollbar {
   width: 6px;
 }
-
 .error-list::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .error-list::-webkit-scrollbar-thumb {
   background: #fda4af;
   border-radius: 3px;
@@ -152,32 +176,38 @@
   transition: background-color 0.1s;
   color: #881337;
   cursor: pointer;
+}
 
-  &:hover {
-    background-color: #ffe4e6;
-  }
+.error-item:not(.is-group):hover {
+  background-color: #ffe4e6;
 }
 
 .error-item.is-warning {
-  border-bottom: 1px solid #fffbeb;
+  border-bottom-color: #fffbeb;
   color: #92400e;
   background-color: #fffbeb;
 }
 
-.error-item.is-warning:hover {
+.error-item.is-warning:not(.is-group):hover {
   background-color: #fef3c7;
 }
 
+.error-item.is-warning .line-num {
+  color: #d97706;
+}
+.error-item.is-warning .error-msg {
+  color: #b45309;
+}
+.error-item.is-warning .error-content,
+.error-item.is-warning .sub-text {
+  color: #92400e;
+}
+
 .error-item.is-group {
-  display: flex;
   flex-direction: column;
   padding: 0;
   gap: 0;
   cursor: default;
-}
-
-.error-item.is-group:hover {
-  background-color: inherit;
 }
 
 .group-header {
@@ -192,30 +222,6 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-.error-item.is-warning .group-header {
-}
-
-.error-msg {
-  color: #be123c;
-  font-weight: 600;
-}
-
-.error-item.is-warning .error-msg {
-  color: #b45309;
-}
-
-.error-content {
-  font-family: monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.8;
-}
-
-.error-item.is-warning .error-content {
-  color: #92400e;
-}
-
 .line-num,
 .line-num-placeholder {
   font-family: monospace;
@@ -227,15 +233,36 @@
   margin-top: 1px;
 }
 
-.error-item.is-warning .line-num {
-  color: #d97706;
-}
-
 .error-details {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1;
+}
+
+.error-msg {
+  color: #be123c;
+  font-weight: 600;
+}
+
+.count-badge {
+  font-size: 0.9em;
+  opacity: 0.8;
+  margin-left: 4px;
+}
+
+.error-content {
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.extra-info {
+  opacity: 0.6;
+  font-size: 0.9em;
+  margin-left: 4px;
 }
 
 .sub-lines {
@@ -267,16 +294,4 @@
   text-overflow: ellipsis;
   opacity: 0.8;
   flex: 1;
-}
-
-.extra-info {
-  opacity: 0.6;
-  font-size: 0.9em;
-  margin-left: 4px;
-}
-
-.count-badge {
-  font-size: 0.9em;
-  opacity: 0.8;
-  margin-left: 4px;
 }

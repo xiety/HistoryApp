@@ -1,8 +1,8 @@
 <section class="category-group" [style.--category-color]="layout().color">
   <div
     class="category-header"
-    [class.is-highlighted]="state.highlightedCategoryId() === layout().id"
-    (animationend)="state.clearHighlight()"
+    [class]="animation.pulseClass()"
+    (animationend)="animation.onAnimationEnd()"
     [style.height.px]="config.categoryHeaderHeight()"
     [style.margin-bottom.px]="config.categoryHeaderMarginBottom()">
     <h2 class="category-badge">
@@ -19,6 +19,7 @@
       @if (sub.name) {
         <span
           class="subcategory-label"
+          [class.is-anchor]="sub.id === state.anchoredSubcategoryId()"
           [style.height.px]="config.subcategoryHeaderHeight()"
           >{{ sub.name }}</span
         >
@@ -28,7 +29,7 @@
         @if (sub.legendRows.length > 0) {
           <div
             class="legend-background"
-            [style.top.px]="getLegendBackgroundTop(0, sub.legendStartY)"
+            [style.top.px]="getLegendBackgroundTop(sub.legendStartY)"
             [style.bottom.px]="0"></div>
         }
 
@@ -38,7 +39,7 @@
               [data]="event"
               type="event"
               [categoryId]="layout().id"
-              [top]="getEventTop(0, event.row)"
+              [top]="getEventTop(event.row)"
               [height]="config.rowHeight()">
             </app-timeline-event>
           }
@@ -50,7 +51,7 @@
               [data]="item"
               type="legend"
               [categoryId]="layout().id"
-              [top]="getLegendItemTop(0, sub.legendStartY, item.row)"
+              [top]="getLegendItemTop(sub.legendStartY, item.row)"
               [height]="config.legendRowHeight()">
             </app-timeline-event>
           }

@@ -19,7 +19,6 @@ export class TimelineConfigService {
 
   readonly textPadding = computed(() => this.baseFontSize() * 0.5);
 
-  readonly sidePadding = computed(() => 1);
   readonly minEventGap = computed(() => 0);
 
   readonly legendRowHeight = computed(() =>

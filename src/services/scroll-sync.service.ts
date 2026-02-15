@@ -1,109 +1,70 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { CategoryLayout } from './timeline-layout.service';
-import { TimelineConfigService } from './timeline-config.service';
 
 export interface LayoutAnchor {
   catId: number;
   subId: number;
   offset: number;
-  catOffset: number;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class ScrollSyncService {
-  private config = inject(TimelineConfigService);
-
   getAnchor(
     layout: CategoryLayout[],
-    scrollTop: number,
+    y: number,
     viewportHeight: number = 0,
   ): LayoutAnchor | null {
-    const threshold = scrollTop + this.config.rulerHeight();
+    if (!layout || layout.length === 0) return null;
 
-    for (const cat of layout) {
-      if (cat.y + cat.height < threshold) continue;
-
-      if (cat.y > threshold + viewportHeight) break;
-
-      for (const sub of cat.subcategories) {
-        if (sub.y <= threshold && sub.y + sub.height >= threshold) {
-          return {
-            catId: cat.id,
-            subId: sub.id,
-            offset: sub.y - scrollTop,
-            catOffset: cat.y - scrollTop,
-          };
-        }
-
-        if (sub.y > threshold) {
-          return {
-            catId: cat.id,
-            subId: sub.id,
-            offset: sub.y - scrollTop,
-            catOffset: cat.y - scrollTop,
-          };
-        }
-      }
-    }
-
-    if (layout.length > 0) {
-      const lastCat = layout[layout.length - 1];
-      if (lastCat.subcategories.length > 0) {
-        const lastSub = lastCat.subcategories[lastCat.subcategories.length - 1];
-        return {
-          catId: lastCat.id,
-          subId: lastSub.id,
-          offset: lastSub.y - scrollTop,
-          catOffset: lastCat.y - scrollTop,
-        };
-      }
-    }
-
-    return null;
-  }
-
-  getAnchorAtY(
-    layout: CategoryLayout[],
-    absoluteY: number,
-  ): LayoutAnchor | null {
-    let closest: LayoutAnchor | null = null;
+    let insideCandidate: LayoutAnchor | null = null;
+    let closestCandidate: LayoutAnchor | null = null;
     let minDistance = Infinity;
 
     for (const cat of layout) {
       for (const sub of cat.subcategories) {
-        const center = sub.y + sub.height / 2;
-        const dist = Math.abs(center - absoluteY);
+        const subTop = sub.y;
+        const subBottom = subTop + sub.totalHeight;
 
+        const dist = Math.abs(subTop - y);
         if (dist < minDistance) {
           minDistance = dist;
-          closest = {
+          closestCandidate = {
             catId: cat.id,
             subId: sub.id,
-            offset: sub.y - absoluteY,
-            catOffset: cat.y - absoluteY,
+            offset: subTop - y,
           };
+        }
+
+        if (subTop >= y && subTop < y + viewportHeight) {
+          return { catId: cat.id, subId: sub.id, offset: subTop - y };
+        }
+
+        if (y >= subTop && y < subBottom) {
+          if (!insideCandidate) {
+            insideCandidate = {
+              catId: cat.id,
+              subId: sub.id,
+              offset: subTop - y,
+            };
+          }
         }
       }
     }
-    return closest;
+
+    return insideCandidate || closestCandidate || null;
   }
 
-  restoreScrollPosition(
-    layout: CategoryLayout[],
-    anchor: LayoutAnchor,
-  ): number | null {
+  getTargetY(layout: CategoryLayout[], anchor: LayoutAnchor): number | null {
+    if (!layout || layout.length === 0) return null;
+
     const cat = layout.find((c) => c.id === anchor.catId);
     if (!cat) return null;
 
     const sub = cat.subcategories.find((s) => s.id === anchor.subId);
 
-    if (sub) {
-      return sub.y - anchor.offset;
-    }
-
-    return cat.y - anchor.catOffset;
+    return sub ? sub.y : cat ? cat.y : null;
   }
 
   getCategoryBounds(

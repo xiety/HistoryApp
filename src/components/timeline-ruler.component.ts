@@ -22,20 +22,15 @@ export class TimelineRulerComponent {
     return formatYear(year);
   });
 
-  readonly hoveredYearXPct = computed(() => {
+  readonly hoveredYearX = computed(() => {
     const year = this.state.hoveredYear();
     if (year === null) return null;
-
-    const width = this.state.layoutWidth();
-    const x = this.geometry.calculateXPosition(
+    return this.geometry.yearToPixel(
       year,
       this.state.startYear(),
       this.state.endYear(),
-      width,
+      this.state.layoutWidth(),
     );
-
-    if (x > width) return null;
-    return (x / width) * 100;
   });
 
   readonly persistentMarkerLabel = computed(() => {
@@ -44,20 +39,15 @@ export class TimelineRulerComponent {
     return formatYear(year);
   });
 
-  readonly persistentMarkerXPct = computed(() => {
+  readonly persistentMarkerX = computed(() => {
     const year = this.state.persistentMarkerYear();
     if (year === null) return null;
-
-    const width = this.state.layoutWidth();
-    const x = this.geometry.calculateXPosition(
+    return this.geometry.yearToPixel(
       year,
       this.state.startYear(),
       this.state.endYear(),
-      width,
+      this.state.layoutWidth(),
     );
-
-    if (x > width) return null;
-    return (x / width) * 100;
   });
 
   onRulerClick(event: MouseEvent) {
@@ -65,17 +55,15 @@ export class TimelineRulerComponent {
     const rect = target.getBoundingClientRect();
 
     const clickX = event.clientX - rect.left;
-    const totalWidth = rect.width;
-    const padding = this.config.viewPaddingRight();
-    const effectiveWidth = totalWidth - padding;
+    const layoutWidth = this.state.layoutWidth();
 
-    if (clickX > effectiveWidth) return;
+    if (clickX < 0 || clickX > layoutWidth) return;
 
-    const year = this.geometry.calculateYearFromX(
+    const year = this.geometry.pixelToYear(
       clickX,
       this.state.startYear(),
       this.state.endYear(),
-      effectiveWidth,
+      layoutWidth,
     );
 
     this.state.setPersistentMarker(year);

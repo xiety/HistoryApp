@@ -14,6 +14,29 @@
         <span>Load Default</span>
       </button>
     </div>
+
+    <div class="nav-controls">
+      @if (currentLineEventCount() > 0) {
+        <span class="nav-counter" title="Current / Total">
+          {{ currentEventIndex() }} / {{ currentLineEventCount() }}
+        </span>
+      }
+
+      <button
+        class="nav-button"
+        (click)="navigateEvents(-1)"
+        [disabled]="currentLineEventCount() <= 1"
+        title="Previous Event on Line">
+        <app-icon name="chevron-left" [size]="14"></app-icon>
+      </button>
+      <button
+        class="nav-button"
+        (click)="navigateEvents(1)"
+        [disabled]="currentLineEventCount() === 0"
+        title="Next Event on Line">
+        <app-icon name="chevron-right" [size]="14"></app-icon>
+      </button>
+    </div>
   </div>
 
   <textarea
@@ -22,7 +45,10 @@
     [ngModel]="state.inputText()"
     (ngModelChange)="state.setText($event)"
     placeholder="Enter events..."
-    spellcheck="false"></textarea>
+    spellcheck="false"
+    (click)="updateCursor($event)"
+    (keyup)="updateCursor($event)"
+    (focus)="updateCursor($event)"></textarea>
 
   @if (state.parsingErrors().length > 0) {
     <div class="error-panel" [class.collapsed]="!isErrorPanelExpanded()">
