@@ -85,6 +85,8 @@ export class TimelineStateService {
 
   readonly parsedData = computed(() => this.parser.parse(this.inputText()));
 
+  readonly parsingErrors = computed(() => this.parsedData().errors);
+
   readonly dataBounds = computed(() => ({
     min: this.parsedData().minYear,
     max: this.parsedData().maxYear,

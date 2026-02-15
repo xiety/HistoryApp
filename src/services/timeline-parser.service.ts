@@ -29,9 +29,18 @@ export interface CategoryInfo {
   color: string;
 }
 
+export interface TimelineError {
+  line: number;
+  content: string;
+  message: string;
+  type: 'error' | 'warning';
+  extra?: string;
+}
+
 export interface TimelineData {
   categories: CategoryData[];
   groupCategories: Map<number, CategoryInfo[]>;
+  errors: TimelineError[];
   minYear: number;
   maxYear: number;
 }
@@ -44,6 +53,12 @@ interface Target {
 interface DateRange {
   start: number;
   end: number;
+}
+
+interface EventOccurrence {
+  line: number;
+  years: string;
+  context: string;
 }
 
 @Injectable({
@@ -66,10 +81,13 @@ export class TimelineParserService {
     const context = {
       categories: [] as CategoryData[],
       groupCategories: new Map<number, CategoryInfo[]>(),
+      errors: [] as TimelineError[],
       currentTargets: [] as Target[],
       minYear: Infinity,
       maxYear: -Infinity,
       hasEvents: false,
+      headerMap: new Map<string, number[]>(),
+      eventMap: new Map<string, EventOccurrence[]>(),
     };
 
     const lines = text.split(/\r?\n/);
@@ -77,11 +95,16 @@ export class TimelineParserService {
       this.processLine(lines[i], i, context);
     }
 
+    this.checkDuplicates(context);
+
+    context.errors.sort((a, b) => a.line - b.line);
+
     this.sortEvents(context.categories);
 
     return {
       categories: context.categories,
       groupCategories: context.groupCategories,
+      errors: context.errors,
       minYear: context.hasEvents ? context.minYear : 0,
       maxYear: context.hasEvents ? context.maxYear : 0,
     };
@@ -92,21 +115,105 @@ export class TimelineParserService {
     if (!trimmed) return;
 
     if (trimmed.startsWith('#')) {
-      ctx.currentTargets = this.parseHeader(trimmed);
+      const headerContent = trimmed.substring(1).trim();
+
+      if (!ctx.headerMap.has(headerContent))
+        ctx.headerMap.set(headerContent, []);
+      ctx.headerMap.get(headerContent).push(lineIndex);
+
+      const targets = this.parseHeader(trimmed);
+      if (targets.length > 0) {
+        ctx.currentTargets = targets;
+      } else {
+        ctx.errors.push({
+          line: lineIndex,
+          content: trimmed,
+          message: 'Invalid header format',
+          type: 'error',
+        });
+      }
       return;
     }
 
-    if (ctx.currentTargets.length === 0) return;
-
     const match = trimmed.match(this.MULTI_RANGE_REGEX);
-    if (!match) return;
+    if (match) {
+      if (ctx.currentTargets.length === 0) {
+        ctx.errors.push({
+          line: lineIndex,
+          content: trimmed,
+          message: 'Event defined before any Category header',
+          type: 'error',
+        });
+        return;
+      }
 
-    const name = match[1];
-    const ranges = this.parseDateString(match[2]);
+      const name = match[1].trim();
+      const rangesPart = match[2].trim();
 
-    if (ranges.length > 0) {
-      this.createEvents(name, ranges, lineIndex, ctx);
+      if (!ctx.eventMap.has(name)) ctx.eventMap.set(name, []);
+
+      const contextStr = ctx.currentTargets
+        .map((t: Target) =>
+          t.subcategory ? `${t.category} (${t.subcategory})` : t.category,
+        )
+        .join(', ');
+
+      ctx.eventMap.get(name).push({
+        line: lineIndex,
+        years: rangesPart,
+        context: contextStr,
+      });
+
+      const ranges = this.parseDateString(rangesPart);
+
+      if (ranges.length > 0) {
+        this.createEvents(name, ranges, lineIndex, ctx);
+      } else {
+        ctx.errors.push({
+          line: lineIndex,
+          content: trimmed,
+          message: 'Could not parse date range',
+          type: 'error',
+        });
+      }
+      return;
     }
+
+    ctx.errors.push({
+      line: lineIndex,
+      content: trimmed,
+      message: 'Unrecognized format',
+      type: 'error',
+    });
+  }
+
+  private checkDuplicates(ctx: any) {
+    ctx.headerMap.forEach((lines: number[], content: string) => {
+      if (lines.length > 1) {
+        lines.forEach((line) => {
+          ctx.errors.push({
+            line,
+            content: `# ${content}`,
+            message: 'Duplicate header definition',
+            type: 'error',
+          });
+        });
+      }
+    });
+
+    ctx.eventMap.forEach((occurrences: EventOccurrence[], name: string) => {
+      if (occurrences.length > 1) {
+        occurrences.forEach((occ) => {
+          ctx.errors.push({
+            line: occ.line,
+            content: name,
+            message: 'Duplicate event name',
+            type: 'warning',
+            extra: `${occ.years} (${occ.context})`,
+          });
+        });
+      }
+    });
   }
 
   private createEvents(

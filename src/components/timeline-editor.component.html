@@ -15,6 +15,7 @@
       </button>
     </div>
   </div>
+
   <textarea
     #editorInput
     class="data-input-area"
@@ -22,4 +23,77 @@
     (ngModelChange)="state.setText($event)"
     placeholder="Enter events..."
     spellcheck="false"></textarea>
+
+  @if (state.parsingErrors().length > 0) {
+    <div class="error-panel" [class.collapsed]="!isErrorPanelExpanded()">
+      <div
+        class="error-header"
+        (click)="toggleErrorPanel()"
+        title="Toggle Issues List">
+        <app-icon
+          [name]="isErrorPanelExpanded() ? 'chevron-down' : 'chevron-right'"
+          [size]="14" />
+        <span>{{ state.parsingErrors().length }} Issues Found</span>
+      </div>
+
+      @if (isErrorPanelExpanded()) {
+        <ul class="error-list custom-scrollbar">
+          @for (group of groupedErrors(); track group.key) {
+            @if (group.items.length === 1) {
+              @let item = group.items[0];
+              <li
+                class="error-item"
+                [class.is-warning]="group.type === 'warning'"
+                (click)="jumpToLine(item.line, $event)">
+                <span class="line-num">{{ item.line + 1 }}</span>
+                <div class="error-details">
+                  <span class="error-msg">{{ group.message }}</span>
+                  <span class="error-content">
+                    {{ group.content }}
+                    @if (item.extra) {
+                      <span class="extra-info">{{ item.extra }}</span>
+                    }
+                  </span>
+                </div>
+              </li>
+            } @else {
+              <li
+                class="error-item is-group"
+                [class.is-warning]="group.type === 'warning'">
+                <div
+                  class="group-header"
+                  (click)="jumpToLine(group.items[0].line, $event)">
+                  <div class="line-num-placeholder"></div>
+                  <div class="error-details">
+                    <span class="error-msg"
+                      >{{ group.message }}
+                      <span class="count-badge"
+                        >({{ group.items.length }})</span
+                      ></span
+                    >
+                  </div>
+                </div>
+
+                <div class="sub-lines">
+                  @for (item of group.items; track item.line) {
+                    <div
+                      class="sub-item"
+                      (click)="jumpToLine(item.line, $event)">
+                      <span class="line-num">{{ item.line + 1 }}</span>
+                      <span class="sub-text">
+                        {{ group.content }}
+                        @if (item.extra) {
+                          <span class="extra-info">{{ item.extra }}</span>
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+              </li>
+            }
+          }
+        </ul>
+      }
+    </div>
+  }
 </div>
