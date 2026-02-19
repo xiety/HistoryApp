@@ -25,10 +25,14 @@ export class TimelineRulerComponent {
   readonly hoveredYearX = computed(() => {
     const year = this.state.hoveredYear();
     if (year === null) return null;
+    const start = this.state.startYear();
+    const end = this.state.endYear();
+    if (year < start || year > end) return null;
+
     return this.geometry.yearToPixel(
       year,
-      this.state.startYear(),
-      this.state.endYear(),
+      start,
+      end,
       this.state.layoutWidth(),
     );
   });
@@ -42,34 +46,41 @@ export class TimelineRulerComponent {
   readonly persistentMarkerX = computed(() => {
     const year = this.state.persistentMarkerYear();
     if (year === null) return null;
+    const start = this.state.startYear();
+    const end = this.state.endYear();
+    if (year < start || year > end) return null;
+
     return this.geometry.yearToPixel(
       year,
-      this.state.startYear(),
-      this.state.endYear(),
+      start,
+      end,
       this.state.layoutWidth(),
     );
   });
 
   onRulerClick(event: MouseEvent) {
+    event.stopPropagation();
+    if (this.state.isContentManipulation()) {
+      return;
+    }
+
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-
     const clickX = event.clientX - rect.left;
     const layoutWidth = this.state.layoutWidth();
 
-    if (clickX < 0 || clickX > layoutWidth) return;
-
-    const year = this.geometry.pixelToYear(
-      clickX,
-      this.state.startYear(),
-      this.state.endYear(),
-      layoutWidth,
-    );
-
-    this.state.setPersistentMarker(year);
+    if (clickX >= 0 && clickX <= layoutWidth) {
+      const year = this.geometry.pixelToYear(
+        clickX,
+        this.state.startYear(),
+        this.state.endYear(),
+        layoutWidth,
+      );
+      this.state.setPersistentMarker(year);
+    }
   }
 
-  clearPersistentMarker(event: Event) {
+  clearPersistentMarker(event: MouseEvent) {
     event.stopPropagation();
     this.state.setPersistentMarker(null);
   }

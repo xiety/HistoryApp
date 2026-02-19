@@ -51,18 +51,18 @@
     (focus)="updateCursor($event)"></textarea>
 
   @if (state.parsingErrors().length > 0) {
-    <div class="error-panel" [class.collapsed]="!isErrorPanelExpanded()">
+    <div class="error-panel" [class.collapsed]="!ui.isErrorPanelExpanded()">
       <div
         class="error-header"
         (click)="toggleErrorPanel()"
         title="Toggle Issues List">
         <app-icon
-          [name]="isErrorPanelExpanded() ? 'chevron-down' : 'chevron-right'"
+          [name]="ui.isErrorPanelExpanded() ? 'chevron-down' : 'chevron-right'"
           [size]="14" />
         <span>{{ state.parsingErrors().length }} Issues Found</span>
       </div>
 
-      @if (isErrorPanelExpanded()) {
+      @if (ui.isErrorPanelExpanded()) {
         <ul class="error-list custom-scrollbar">
           @for (group of groupedErrors(); track group.key) {
             @if (group.items.length === 1) {

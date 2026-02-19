@@ -66,14 +66,4 @@ export class ScrollSyncService {
 
     return sub ? sub.y : cat ? cat.y : null;
   }
-
-  getCategoryBounds(
-    layout: CategoryLayout[],
-  ): Map<number, { top: number; bottom: number }> {
-    const map = new Map<number, { top: number; bottom: number }>();
-    for (const cat of layout) {
-      map.set(cat.id, { top: cat.y, bottom: cat.y + cat.height });
-    }
-    return map;
-  }
 }

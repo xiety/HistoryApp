@@ -10,9 +10,11 @@
   [style.width.px]="data().visualWidth"
   [style.top.px]="top()"
   [style.height.px]="height()"
+  (pointerdown)="onPointerDown($event)"
+  (pointerup)="onPointerUp($event)"
   (click)="onClick($event)"
-  (mouseenter)="onMouseEnter($event)"
-  (mouseleave)="onMouseLeave()"
+  (pointerenter)="onMouseEnter($event)"
+  (pointerleave)="onMouseLeave()"
   (animationend)="animation.onAnimationEnd()">
   <div class="interaction-layer">
     @if (type() === "event") {
@@ -30,12 +32,8 @@
         [class.is-legend-full]="e.displayMode === 'legend-full'"
         [style.maxWidth.px]="isActive() ? null : e.safeWidth"
         [style.background-image]="gradientStyle()">
-        @if (showLegendId()) {
-          <span class="legend-id">{{ e.legendId }}</span>
-        }
-
         <span class="event-text" [class.text-fade-mask]="isTextMasked()">
-          {{ raw().name }}
+          {{ e.displayText }}
         </span>
       </div>
 
@@ -43,12 +41,8 @@
         class="event-label label-mask"
         [class.is-legend-full]="e.displayMode === 'legend-full'"
         aria-hidden="true">
-        @if (showLegendId()) {
-          <span class="legend-id">{{ e.legendId }}</span>
-        }
-
         <span class="event-text" [class.text-fade-mask]="isTextMasked()">
-          {{ raw().name }}
+          {{ e.displayText }}
         </span>
       </div>
 

@@ -15,7 +15,6 @@ import { usePulseAnimation } from '../utils/pulse-animation';
   selector: 'app-timeline-category',
   standalone: true,
   imports: [CommonModule, TimelineEventComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './timeline-category.component.html',
   styleUrls: ['./timeline-category.component.css'],
 })

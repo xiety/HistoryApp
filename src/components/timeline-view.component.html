@@ -9,11 +9,19 @@
     [style.padding-bottom.px]="config.viewPaddingBottom()">
     <app-timeline-grid [lines]="state.gridLines()"></app-timeline-grid>
 
-    @for (category of state.processedLayout(); track category.id) {
+    <div [style.height.px]="layout.topSpacerHeight()"></div>
+
+    @for (category of layout.processedLayout(); track category.id) {
       <app-timeline-category [layout]="category"></app-timeline-category>
     }
 
-    @if (state.processedLayout().length === 0) {
+    <div [style.height.px]="layout.bottomSpacerHeight()"></div>
+
+    @if (
+      layout.processedLayout().length === 0 &&
+      layout.topSpacerHeight() === 0 &&
+      layout.bottomSpacerHeight() === 0
+    ) {
       <div class="empty-message">
         <p>No events found in this range.</p>
       </div>

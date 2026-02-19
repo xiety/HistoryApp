@@ -4,12 +4,12 @@ import {
   viewChild,
   ElementRef,
   effect,
-  signal,
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { TimelineUiStateService } from '../services/timeline-ui-state.service';
 import { IconComponent } from './icon.component';
 
 interface ErrorGroup {
@@ -22,16 +22,16 @@ interface ErrorGroup {
 
 @Component({
   selector: 'app-timeline-editor',
+  standalone: true,
   imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './timeline-editor.component.html',
   styleUrls: ['./timeline-editor.component.css'],
 })
 export class TimelineEditorComponent {
   state = inject(TimelineStateService);
+  ui = inject(TimelineUiStateService);
   editorInput =
     viewChild.required<ElementRef<HTMLTextAreaElement>>('editorInput');
-
-  isErrorPanelExpanded = signal<boolean>(true);
 
   readonly groupedErrors = computed<ErrorGroup[]>(() => {
     const errors = this.state.parsingErrors();
@@ -81,7 +81,7 @@ export class TimelineEditorComponent {
   }
 
   toggleErrorPanel() {
-    this.isErrorPanelExpanded.update((v) => !v);
+    this.ui.isErrorPanelExpanded.update((v) => !v);
   }
 
   jumpToLine(lineIndex: number, event?: Event) {

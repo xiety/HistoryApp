@@ -1,11 +1,11 @@
 {
   "printWidth": 80,
   "tabWidth": 2,
+  "bracketSameLine": true,
   "overrides": [
     {
       "files": "*.component.html",
       "options": {
-        "bracketSameLine": true,
         "parser": "angular"
       }
     }

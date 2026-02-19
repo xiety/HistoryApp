@@ -1,26 +1,16 @@
 {
   "name": "HistoryApp",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
-  },
-  "prettier": {
-    "bracketSameLine": true,
-    "overrides": [
-      {
-        "files": "*.html",
-        "options": {
-          "parser": "angular"
-        }
-      }
-    ]
+    "test": "ng test",
+    "lint": "eslint .",
+    "dev": "ng serve"
   },
   "private": true,
-  "packageManager": "npm@11.10.0",
   "dependencies": {
     "@angular/common": "^21.1.4",
     "@angular/compiler": "^21.1.4",
@@ -34,7 +24,6 @@
     "@angular/build": "^21.1.4",
     "@angular/cli": "^21.1.4",
     "@angular/compiler-cli": "^21.1.4",
-    "jsdom": "^28.0.0",
     "typescript": "~5.9.3"
   }
 }

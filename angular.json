@@ -6,9 +6,14 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "HistoryApp": {
+    "app": {
       "projectType": "application",
-      "schematics": {},
+      "schematics": {
+        "@schematics/angular:component": {
+          "standalone": true,
+          "changeDetection": "OnPush"
+        }
+      },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -38,8 +43,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "6kB",
+                  "maximumError": "10kB"
                 }
               ],
               "outputHashing": "all"
@@ -56,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "HistoryApp:build:production"
+              "buildTarget": "app:build:production"
             },
             "development": {
-              "buildTarget": "HistoryApp:build:development"
+              "buildTarget": "app:build:development"
             }
           },
           "defaultConfiguration": "development"

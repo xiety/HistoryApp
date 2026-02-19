@@ -9,6 +9,7 @@
   font-weight: 700;
   line-height: 1.2;
   user-select: none;
+  touch-action: none;
   cursor: default;
   box-sizing: border-box;
   overflow: visible;
@@ -130,7 +131,7 @@
 }
 
 .event-label {
-  padding-left: 0.4em;
+  padding-left: 2px;
   padding-right: 0;
   white-space: nowrap;
   display: flex;
@@ -142,12 +143,6 @@
   &.is-legend-full {
     padding-right: 1px;
   }
-}
-
-.legend-id {
-  flex: none;
-  margin-right: 0.3em;
-  font-weight: 700;
 }
 
 .event-text {
@@ -177,7 +172,6 @@
     background: white;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     border-radius: 2px;
-    padding-right: 8px;
   }
 }
 
@@ -196,7 +190,7 @@
 
 .legend-text {
   display: block;
-  padding: 1px 0.5em;
+  padding: 1px 1px;
   color: hsl(var(--category-color));
   transition:
     background-color 0.1s,
@@ -236,14 +230,13 @@
 }
 
 .category-mini-tag {
-  font-size: 0.75em;
+  font-size: 0.8em;
   padding: 2px 6px;
   border-radius: 4px;
   color: white;
   font-weight: 700;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
 .date-tag {

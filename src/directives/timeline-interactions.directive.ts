@@ -10,13 +10,16 @@ import { TimelineWorkspaceComponent } from '../components/timeline-workspace.com
   selector: '[appTimelineInteractions]',
   standalone: true,
   host: {
+    '[style.touch-action]': '"none"',
+    '[style.-webkit-tap-highlight-color]': '"transparent"',
+    '[style.-webkit-touch-callout]': '"none"',
     '(wheel)': 'onWheel($event)',
     '(pointerdown)': 'onPointerDown($event)',
     '(pointermove)': 'onPointerMove($event)',
     '(pointerup)': 'onPointerUp($event)',
-    '(pointercancel)': 'onPointerUp($event)',
-    '(lostpointercapture)': 'onPointerUp($event)',
+    '(pointercancel)': 'onPointerCancel($event)',
     '(pointerleave)': 'onPointerLeave($event)',
+    '(click)': 'onHostClick($event)',
   },
 })
 export class TimelineInteractionsDirective {
@@ -27,10 +30,11 @@ export class TimelineInteractionsDirective {
 
   private activePointers = new Map<number, PointerEvent>();
   private readonly wheelActivity$ = new Subject<void>();
+
   private lastPinchDist = -1;
-  private dragStart = { x: 0, y: 0, yearStart: 0, yearEnd: 0 };
   private isDragging = false;
   private hasMoved = false;
+  private dragStart = { x: 0, y: 0, yearStart: 0, yearEnd: 0 };
 
   constructor() {
     this.wheelActivity$
@@ -43,12 +47,8 @@ export class TimelineInteractionsDirective {
       });
   }
 
-  private getScrollContainer(): HTMLElement | null {
-    try {
-      return this.workspace.scrollContainer().nativeElement;
-    } catch {
-      return null;
-    }
+  private getScrollContainer(): HTMLElement {
+    return this.workspace.scrollContainer().nativeElement;
   }
 
   onWheel(event: WheelEvent): void {
@@ -73,9 +73,7 @@ export class TimelineInteractionsDirective {
       deltaY = 0;
     }
 
-    const isHorizontalPan = Math.abs(deltaX) > Math.abs(deltaY);
-
-    if (isHorizontalPan) {
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
       this.lockAnchorAtMouse(event);
       event.preventDefault();
       event.stopPropagation();
@@ -85,7 +83,12 @@ export class TimelineInteractionsDirective {
 
   onPointerDown(event: PointerEvent): void {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
-    if (this.isScrollbarInteraction(event)) return;
+
+    this.state.isContentManipulation.set(false);
+
+    if (event.pointerType === 'mouse' && this.isScrollbarInteraction(event))
+      return;
+    if (event.pointerType === 'touch') event.preventDefault();
 
     this.activePointers.set(event.pointerId, event);
 
@@ -94,25 +97,54 @@ export class TimelineInteractionsDirective {
     }
 
     if (this.activePointers.size === 1) {
-      this.setupDrag(event, false);
+      this.startTracking(event);
     } else if (this.activePointers.size === 2) {
-      this.state.isUserInteracting.set(true);
-      this.state.isContentManipulation.set(true);
-      this.beginPinch();
+      this.switchToPinch();
     }
   }
 
   onPointerMove(event: PointerEvent): void {
     this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
+
     if (event.pointerType === 'mouse') {
       this.updateHoverYear(event.clientX);
+      if (this.isDragging && event.buttons === 0) {
+        this.onPointerUp(event);
+        return;
+      }
     }
 
-    if (this.activePointers.has(event.pointerId)) {
-      this.activePointers.set(event.pointerId, event);
-    }
+    if (!this.activePointers.has(event.pointerId)) return;
+    this.activePointers.set(event.pointerId, event);
 
-    if (this.isDragging && !this.hasMoved) {
+    if (this.activePointers.size === 2) {
+      this.updatePinch();
+    } else if (this.isDragging) {
+      this.processDrag(event);
+    }
+  }
+
+  private startTracking(event: PointerEvent) {
+    this.isDragging = true;
+    this.hasMoved = false;
+    this.dragStart = {
+      x: event.clientX,
+      y: event.clientY,
+      yearStart: this.state.startYear(),
+      yearEnd: this.state.endYear(),
+    };
+  }
+
+  private switchToPinch() {
+    this.isDragging = false;
+    this.hasMoved = true;
+    this.state.isUserInteracting.set(true);
+    this.state.isContentManipulation.set(true);
+    this.lastPinchDist = this.getPinchDistance();
+  }
+
+  private processDrag(event: PointerEvent) {
+    if (!this.hasMoved) {
       const dist = Math.hypot(
         event.clientX - this.dragStart.x,
         event.clientY - this.dragStart.y,
@@ -121,161 +153,91 @@ export class TimelineInteractionsDirective {
         this.hasMoved = true;
         this.state.isUserInteracting.set(true);
         this.state.isContentManipulation.set(true);
-
-        for (const pid of this.activePointers.keys()) {
-          if (!this.el.nativeElement.hasPointerCapture(pid)) {
-            try {
-              this.el.nativeElement.setPointerCapture(pid);
-            } catch {}
-          }
-        }
+        this.el.nativeElement.setPointerCapture(event.pointerId);
 
         const container = this.getScrollContainer();
-        const startY = container
-          ? this.dragStart.y - container.getBoundingClientRect().top
-          : 0;
+        const startY = this.dragStart.y - container.getBoundingClientRect().top;
         this.workspace.startDrag(startY);
       }
-    }
-
-    if (this.activePointers.size === 2) {
-      this.updatePinch();
-    } else if (
-      this.activePointers.size === 1 &&
-      this.isDragging &&
-      this.hasMoved
-    ) {
-      this.updateDrag(event);
+    } else {
+      const yearDelta =
+        (this.dragStart.x - event.clientX) / this.state.pixelsPerYear();
+      this.state.setRange(
+        this.dragStart.yearStart + yearDelta,
+        this.dragStart.yearEnd + yearDelta,
+      );
+      this.workspace.updateDrag(event.clientY - this.dragStart.y);
     }
   }
 
   onPointerUp(event: PointerEvent): void {
-    if (!this.activePointers.has(event.pointerId)) return;
-    this.activePointers.delete(event.pointerId);
+    const tracked = this.activePointers.get(event.pointerId);
+    if (!tracked || tracked.pointerType !== event.pointerType) return;
 
+    this.activePointers.delete(event.pointerId);
     if (this.el.nativeElement.hasPointerCapture(event.pointerId)) {
       this.el.nativeElement.releasePointerCapture(event.pointerId);
     }
 
     if (this.activePointers.size === 0) {
-      if (event.pointerType !== 'mouse' && !this.hasMoved) {
-        this.updateHoverYear(event.clientX);
-      }
-
-      this.endDrag();
-
+      if (!this.hasMoved) this.updateHoverYear(event.clientX);
+      this.isDragging = false;
       if (this.hasMoved) {
+        this.workspace.endDrag();
         this.state.isUserInteracting.set(false);
-        this.state.isContentManipulation.set(false);
       }
     } else if (this.activePointers.size === 1) {
       const remaining = this.activePointers.values().next().value;
-      if (remaining) {
-        this.setupDrag(remaining, this.hasMoved);
-      }
+      if (remaining) this.startTracking(remaining);
       this.lastPinchDist = -1;
     }
   }
 
+  onPointerCancel(event: PointerEvent): void {
+    this.onPointerUp(event);
+  }
+
   onPointerLeave(event: PointerEvent): void {
-    if (event.pointerType === 'mouse') {
-      this.state.setHoveredYear(null);
-    }
+    if (event.pointerType === 'mouse') this.state.setHoveredYear(null);
+  }
+
+  onHostClick(event: MouseEvent): void {
+    this.state.isContentManipulation.set(false);
   }
 
   private lockAnchorAtMouse(event: MouseEvent) {
     this.state.isContentManipulation.set(true);
     const container = this.getScrollContainer();
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      this.workspace.setAnchorAtMouse(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-      );
-    }
+    const rect = container.getBoundingClientRect();
+    this.workspace.setAnchorAtMouse(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+    );
   }
 
   private handleZoomWheel(event: WheelEvent) {
     const rect = this.el.nativeElement.getBoundingClientRect();
-    const relativeX = event.clientX - rect.left;
     const delta =
       Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 100);
-    this.applyZoom(relativeX, delta);
-  }
-
-  private setupDrag(event: PointerEvent, isContinuation: boolean) {
-    this.isDragging = true;
-    this.hasMoved = isContinuation;
-    this.dragStart = {
-      x: event.clientX,
-      y: event.clientY,
-      yearStart: this.state.startYear(),
-      yearEnd: this.state.endYear(),
-    };
-
-    if (isContinuation) {
-      this.state.isUserInteracting.set(true);
-      this.state.isContentManipulation.set(true);
-      const container = this.getScrollContainer();
-      const startY = container
-        ? event.clientY - container.getBoundingClientRect().top
-        : 0;
-      this.workspace.startDrag(startY);
-    }
-  }
-
-  private updateDrag(event: PointerEvent) {
-    if (!this.isDragging) return;
-
-    const deltaX = this.dragStart.x - event.clientX;
-    const pxPerYear = this.state.pixelsPerYear();
-
-    if (pxPerYear > 0) {
-      const yearDelta = deltaX / pxPerYear;
-      this.state.setRange(
-        this.dragStart.yearStart + yearDelta,
-        this.dragStart.yearEnd + yearDelta,
-      );
-    }
-
-    const deltaY = event.clientY - this.dragStart.y;
-    this.workspace.updateDrag(deltaY);
-  }
-
-  private endDrag() {
-    this.isDragging = false;
-    if (this.hasMoved) {
-      this.workspace.endDrag();
-    }
-    this.lastPinchDist = -1;
-  }
-
-  private beginPinch() {
-    this.isDragging = false;
-    this.hasMoved = true;
-    this.lastPinchDist = this.getPinchDistance();
+    this.applyZoom(event.clientX - rect.left, delta);
   }
 
   private updatePinch() {
     const currentDist = this.getPinchDistance();
     if (this.lastPinchDist > 0 && currentDist > 0) {
       const delta = this.lastPinchDist - currentDist;
-      const pointers = Array.from(this.activePointers.values());
-      const centerX = (pointers[0].clientX + pointers[1].clientX) / 2;
-      const rect = this.el.nativeElement.getBoundingClientRect();
-      const relativeX = centerX - rect.left;
-
       if (Math.abs(delta) > 2) {
-        this.applyZoom(relativeX, delta * 2.5);
+        const pointers = Array.from(this.activePointers.values());
+        const centerX = (pointers[0].clientX + pointers[1].clientX) / 2;
+        const rect = this.el.nativeElement.getBoundingClientRect();
+        this.applyZoom(centerX - rect.left, delta * 2.5);
         this.lastPinchDist = currentDist;
       }
     }
   }
 
   private applyPan(deltaPx: number) {
-    const pxPerYear = this.state.pixelsPerYear();
-    if (pxPerYear <= 0) return;
-    const yearDelta = deltaPx / pxPerYear;
+    const yearDelta = deltaPx / this.state.pixelsPerYear();
     this.state.setRange(
       this.state.startYear() + yearDelta,
       this.state.endYear() + yearDelta,
@@ -286,15 +248,12 @@ export class TimelineInteractionsDirective {
     const start = this.state.startYear();
     const end = this.state.endYear();
     const span = end - start;
-
     if (span < 0.01 && delta < 0) return;
     if (span > 100000 && delta > 0) return;
 
-    const layoutWidth = this.state.layoutWidth();
-    const ratio = Math.max(0, Math.min(1, pivotX / layoutWidth));
+    const ratio = Math.max(0, Math.min(1, pivotX / this.state.layoutWidth()));
     const pivotYear = start + span * ratio;
-    const factor = 1 + delta * 0.001;
-    const newSpan = span * factor;
+    const newSpan = span * (1 + delta * 0.001);
 
     this.state.setRange(
       pivotYear - newSpan * ratio,
@@ -324,6 +283,10 @@ export class TimelineInteractionsDirective {
 
   private isScrollbarInteraction(event: PointerEvent): boolean {
     const container = this.getScrollContainer();
-    return container !== null && event.target === container;
+    if (event.target !== container) return false;
+    return (
+      event.offsetX > container.clientWidth ||
+      event.offsetY > container.clientHeight
+    );
   }
 }

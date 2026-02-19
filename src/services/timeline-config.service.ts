@@ -17,7 +17,7 @@ export class TimelineConfigService {
   readonly gapY = computed(() => 2);
   readonly rowTotalHeight = computed(() => this.rowHeight() + this.gapY());
 
-  readonly textPadding = computed(() => this.baseFontSize() * 0.5);
+  readonly textPadding = computed(() => 2);
 
   readonly minEventGap = computed(() => 0);
 

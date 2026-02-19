@@ -2,6 +2,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  touch-action: none;
 }
 
 .timeline-view-wrapper {
@@ -11,7 +12,7 @@
   flex-direction: column;
   background-color: #ffffff;
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: none;
   cursor: default;
   user-select: none;
 
@@ -27,7 +28,7 @@
   background-color: white;
   z-index: 130;
   border-bottom: 1px solid #cbd5e1;
-
+  touch-action: none;
   scrollbar-gutter: stable;
 }
 
@@ -37,7 +38,7 @@
   overflow-x: hidden;
   position: relative;
   overflow-anchor: none;
-  touch-action: pan-y;
+  touch-action: none;
   scrollbar-gutter: stable;
 }
 

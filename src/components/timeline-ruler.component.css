@@ -16,6 +16,7 @@
   width: 100%;
   cursor: pointer;
   overflow: visible;
+  touch-action: none;
 }
 
 .fluid-ruler-container {

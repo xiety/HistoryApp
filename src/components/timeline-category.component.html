@@ -10,6 +10,10 @@
     </h2>
   </div>
 
+  @if (layout().virtualPaddingTop) {
+    <div [style.height.px]="layout().virtualPaddingTop"></div>
+  }
+
   @for (sub of layout().subcategories; track sub.id) {
     <div
       class="subcategory-group"

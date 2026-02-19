@@ -9,6 +9,7 @@ export type SidebarMode = 'auto' | 'visible' | 'hidden';
 export class TimelineUiStateService {
   readonly sidebarMode = signal<SidebarMode>('auto');
   readonly activeSidebarTab = signal<SidebarTab>('editor');
+  readonly isErrorPanelExpanded = signal<boolean>(true);
 
   showSidebar() {
     this.sidebarMode.set('visible');

@@ -47,7 +47,6 @@ export interface TocToggleState {
 })
 export class TimelineStateService {
   private readonly parser = inject(TimelineParserService);
-  private readonly layout = inject(TimelineLayoutService);
   private readonly config = inject(TimelineConfigService);
   private readonly search = inject(TimelineSearchService);
   private readonly geometry = inject(TimelineGeometryService);
@@ -96,6 +95,9 @@ export class TimelineStateService {
 
   readonly pendingScrollToEventId = signal<number | null>(null);
 
+  readonly scrollTop = signal<number>(0);
+  readonly viewportHeight = signal<number>(800);
+
   readonly parsedData = computed(() => this.parser.parse(this.inputText()));
 
   readonly parsingErrors = computed(() => this.parsedData().errors);
@@ -123,7 +125,7 @@ export class TimelineStateService {
     );
   });
 
-  private readonly activeData = computed<TimelineData>(() => {
+  readonly activeData = computed<TimelineData>(() => {
     const data = this.parsedData();
     const hideSmall = this.hideSmallEvents();
     if (!hideSmall) return data;
@@ -196,56 +198,6 @@ export class TimelineStateService {
       }
     }
     return { ...data, categories };
-  });
-
-  readonly processedLayout = computed<CategoryLayout[]>(() => {
-    const data = this.renderableData();
-    const width = this.layoutWidth();
-    const start = this.startYear();
-    const end = this.endYear();
-    const showLegends = this.showLegends();
-    const compactMode = this.compactMode();
-
-    const rawCategories = data.categories.flatMap((cat) => {
-      const sublayouts: SubcategoryLayout[] = [];
-
-      for (const sub of cat.subcategories) {
-        const res = this.layout.computeLayout(
-          sub.events,
-          width,
-          start,
-          end,
-          showLegends,
-          compactMode,
-        );
-
-        if (res.rowCount > 0) {
-          sublayouts.push({
-            id: sub.id,
-            name: sub.name,
-            y: 0,
-            totalHeight: 0,
-            ...res,
-          });
-        }
-      }
-
-      if (sublayouts.length > 0) {
-        return [
-          {
-            id: cat.id,
-            name: cat.name,
-            color: cat.color,
-            subcategories: sublayouts,
-            y: 0,
-            height: 0,
-          },
-        ];
-      }
-      return [];
-    });
-
-    return this.layout.computeVerticalPositions(rawCategories);
   });
 
   readonly activeBounds = computed(() => {

@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineConfigService } from '../services/timeline-config.service';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { TimelineLayoutService } from '../services/timeline-layout.service';
 import { TimelineGridComponent } from './timeline-grid.component';
 import { TimelineCategoryComponent } from './timeline-category.component';
 
@@ -15,8 +16,12 @@ import { TimelineCategoryComponent } from './timeline-category.component';
 export class TimelineViewComponent {
   state = inject(TimelineStateService);
   config = inject(TimelineConfigService);
+  layout = inject(TimelineLayoutService);
 
   clearSelection() {
+    if (this.state.isContentManipulation()) {
+      return;
+    }
     this.state.clearEventSelection();
   }
 }

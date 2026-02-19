@@ -92,6 +92,7 @@ export class TimelineWorkspaceComponent {
           if (w !== lastWidth) {
             lastWidth = w;
             this.state.setContainerWidth(w);
+            this.state.viewportHeight.set(el.clientHeight);
             this.restoreScroll();
           }
         }
@@ -140,7 +141,7 @@ export class TimelineWorkspaceComponent {
     });
 
     afterRenderEffect(() => {
-      const newLayout = this.state.processedLayout();
+      const newLayout = this.layout.fullLayout();
       const pendingEventId = this.state.pendingScrollToEventId();
 
       const isFirstRun = this.lastSyncedLayout === null;
@@ -157,7 +158,9 @@ export class TimelineWorkspaceComponent {
         this.handleScrollUpdate();
       } else if (layoutChanged) {
         if (!isFirstRun) {
-          this.restoreScroll();
+          if (!this.isRestoring) {
+            this.restoreScroll();
+          }
         } else {
           this.handleScrollUpdate();
         }
@@ -257,6 +260,9 @@ export class TimelineWorkspaceComponent {
   private handleScrollUpdate() {
     const container = this.scrollContainer().nativeElement;
     this.rulerContainer().nativeElement.scrollLeft = container.scrollLeft;
+
+    this.state.scrollTop.set(container.scrollTop);
+    this.state.viewportHeight.set(container.clientHeight);
 
     if (!this.isRestoring && !this.activeSession) {
       this.updatePassiveAnchor();
@@ -387,14 +393,16 @@ export class TimelineWorkspaceComponent {
   }
 
   private updateVisibleCategories(container: HTMLElement) {
-    const boundsMap = this.scrollSync.getCategoryBounds(this.renderedLayout);
     const scrollTop = container.scrollTop;
     const viewBottom = scrollTop + container.clientHeight;
     const visibleIds = new Set<number>();
 
-    for (const [id, bounds] of boundsMap) {
-      if (bounds.bottom > scrollTop && bounds.top < viewBottom) {
-        visibleIds.add(id);
+    for (const cat of this.renderedLayout) {
+      const top = cat.y;
+      const bottom = cat.y + cat.height;
+
+      if (bottom > scrollTop && top < viewBottom) {
+        visibleIds.add(cat.id);
       }
     }
     this.state.setVisibleCategoryIds(visibleIds);
@@ -414,13 +422,11 @@ export class TimelineWorkspaceComponent {
 
   private scrollToCategoryId(id: number) {
     const el = this.scrollContainer().nativeElement;
-    const bounds = this.scrollSync
-      .getCategoryBounds(this.renderedLayout)
-      .get(id);
+    const cat = this.renderedLayout.find((c) => c.id === id);
 
-    if (bounds) {
+    if (cat) {
       this.isRestoring = true;
-      el.scrollTop = bounds.top;
+      el.scrollTop = cat.y;
       this.updatePassiveAnchor();
 
       this.lockedAnchor = this.passiveAnchor;
@@ -470,10 +476,14 @@ export class TimelineWorkspaceComponent {
 
   private getGuidePositionPx(year: number | null): number | null {
     if (year === null) return null;
+    const start = this.state.startYear();
+    const end = this.state.endYear();
+    if (year < start || year > end) return null;
+
     return this.geometry.yearToPixel(
       year,
-      this.state.startYear(),
-      this.state.endYear(),
+      start,
+      end,
       this.state.layoutWidth(),
     );
   }

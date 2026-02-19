@@ -123,12 +123,31 @@ export class TimelineEventComponent {
       : null;
   });
 
-  onClick(event: MouseEvent) {
-    event.stopPropagation();
-    this.state.toggleEventSelection(this.raw());
+  private pointerDownPos = { x: 0, y: 0 };
+
+  onPointerDown(event: PointerEvent) {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    this.pointerDownPos = { x: event.clientX, y: event.clientY };
   }
 
-  onMouseEnter(event: MouseEvent) {
+  onPointerUp(event: PointerEvent) {
+    const dist = Math.hypot(
+      event.clientX - this.pointerDownPos.x,
+      event.clientY - this.pointerDownPos.y,
+    );
+
+    if (dist < 5) {
+      event.stopPropagation();
+      this.state.toggleEventSelection(this.raw());
+    }
+  }
+
+  onClick(event: MouseEvent) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  onMouseEnter(event: PointerEvent) {
     this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
     this.state.setHoveredEvent(this.raw());
   }

@@ -39,7 +39,7 @@ jobs:
       - name: Upload artefact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist/${{ github.event.repository.name }}/browser
+          path: ./dist/app/browser
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
