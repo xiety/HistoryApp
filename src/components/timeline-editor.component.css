@@ -129,7 +129,6 @@
   cursor: pointer;
   user-select: none;
   height: 30px;
-  box-sizing: border-box;
 }
 
 .error-header:hover {

@@ -21,9 +21,11 @@
   }
 }
 
-.grid-line-solid {
+.grid-line-boundary {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid #94a3b8;
+  width: 1px;
+  background-color: #94a3b8;
+  z-index: 10;
 }

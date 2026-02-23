@@ -34,7 +34,7 @@ export class TimelineGeometryService {
   calculatePixelsPerYear(width: number, start: number, end: number): number {
     const span = end - start;
     if (span <= 0) return 0;
-    const effectiveWidth = Math.max(1, width);
+    const effectiveWidth = Math.max(1, width - 1);
     return effectiveWidth / span;
   }
 
@@ -95,7 +95,7 @@ export class TimelineGeometryService {
 
     if (w < 1) w = 1;
 
-    const visualWidth = w > 1 ? w - 1 : w;
+    const visualWidth = w > 1 && !clippedRight ? w - 1 : w;
 
     return { x, layoutWidth: w, visualWidth, clippedLeft, clippedRight };
   }

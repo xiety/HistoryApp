@@ -24,23 +24,25 @@
         [class.is-single-year]="isSingleYear()"
         [class.is-ongoing]="isOngoing()"
         [class.no-border-left]="e.clippedLeft"
-        [class.no-border-right]="!e.hasRightBorder"></div>
+        [class.no-border-right]="!hasRightBorder()"></div>
 
       <div
         class="event-label label-base"
         [class.is-active]="isActive()"
-        [class.is-legend-full]="e.displayMode === 'legend-full'"
-        [style.maxWidth.px]="isActive() ? null : e.safeWidth"
+        [style.maxWidth.px]="labelMaxWidth()"
         [style.background-image]="gradientStyle()">
+        @if (e.legendId > 0) {
+          <span class="legend-id">{{ e.legendId }}</span>
+        }
         <span class="event-text" [class.text-fade-mask]="isTextMasked()">
           {{ e.displayText }}
         </span>
       </div>
 
-      <div
-        class="event-label label-mask"
-        [class.is-legend-full]="e.displayMode === 'legend-full'"
-        aria-hidden="true">
+      <div class="event-label label-mask" aria-hidden="true">
+        @if (e.legendId > 0) {
+          <span class="legend-id">{{ e.legendId }}</span>
+        }
         <span class="event-text" [class.text-fade-mask]="isTextMasked()">
           {{ e.displayText }}
         </span>
@@ -62,7 +64,8 @@
 
     @if (type() === "legend") {
       <span class="legend-text">
-        {{ item().text }}
+        <span class="legend-id">{{ item().legendId }}</span>
+        <span class="legend-name">{{ item().raw.name }}</span>
       </span>
     }
 

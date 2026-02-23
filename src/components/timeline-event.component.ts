@@ -69,13 +69,27 @@ export class TimelineEventComponent {
     this.isExactSelection(),
   );
 
-  readonly showLegendId = computed(() => {
+  readonly isTextMasked = computed(() => {
     const mode = this.ev().displayMode;
-    return mode === 'legend-full' || mode === 'legend-overflow';
+    return (
+      (mode === 'full-partial' || mode === 'overflow-partial') &&
+      !this.isActive()
+    );
   });
 
-  readonly isTextMasked = computed(() => {
-    return this.ev().needsMask && !this.isActive();
+  readonly hasRightBorder = computed(() => {
+    const e = this.ev();
+    if (e.clippedRight || e.raw.isOngoing) return false;
+    return e.displayMode === 'full' || e.displayMode === 'full-partial';
+  });
+
+  readonly labelMaxWidth = computed(() => {
+    if (this.isActive()) return null;
+    const e = this.ev();
+    if (e.displayMode === 'full') {
+      return e.visualWidth;
+    }
+    return e.safeWidth;
   });
 
   readonly hasRelatedDots = computed(() => this.relatedCategories().length > 0);

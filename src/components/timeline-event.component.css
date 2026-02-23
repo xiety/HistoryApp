@@ -11,7 +11,6 @@
   user-select: none;
   touch-action: none;
   cursor: default;
-  box-sizing: border-box;
   overflow: visible;
   transition: opacity 0.2s;
   z-index: 20;
@@ -131,18 +130,18 @@
 }
 
 .event-label {
-  padding-left: 2px;
-  padding-right: 0;
+  padding: 0 2px;
   white-space: nowrap;
   display: flex;
   align-items: center;
+  gap: 0.25em;
   height: 100%;
   pointer-events: auto;
   overflow: hidden;
+}
 
-  &.is-legend-full {
-    padding-right: 1px;
-  }
+.legend-id {
+  flex-shrink: 0;
 }
 
 .event-text {
@@ -150,7 +149,6 @@
   overflow: hidden;
   white-space: nowrap;
   min-width: 0;
-  padding-bottom: 1px;
 }
 
 .text-fade-mask {
@@ -170,8 +168,9 @@
 
   &.is-active {
     background: white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     border-radius: 2px;
+    padding-right: 5px;
   }
 }
 
@@ -181,6 +180,7 @@
   left: 0;
   bottom: 0;
   width: 100%;
+  padding-right: 0;
   overflow: hidden;
   color: #fff;
   opacity: 0;
@@ -189,12 +189,18 @@
 }
 
 .legend-text {
-  display: block;
-  padding: 1px 1px;
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 1px 2px;
   color: hsl(var(--category-color));
   transition:
     background-color 0.1s,
     color 0.1s;
+  white-space: nowrap;
+}
+
+.legend-name {
   white-space: nowrap;
 }
 

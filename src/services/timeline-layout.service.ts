@@ -12,15 +12,13 @@ export interface RenderEvent {
   layoutWidth: number;
   visualWidth: number;
   row: number;
-  displayMode: 'full' | 'overflow' | 'legend-full' | 'legend-overflow';
   clippedLeft: boolean;
   clippedRight: boolean;
   nameWidth: number;
   displayText: string;
   safeWidth: number;
   contentWidth: number;
-  needsMask: boolean;
-  hasRightBorder: boolean;
+  displayMode: 'full' | 'full-partial' | 'overflow' | 'overflow-partial';
 }
 
 export interface LegendItem {
@@ -64,6 +62,7 @@ interface LayoutCandidate {
   clippedLeft: boolean;
   clippedRight: boolean;
   nameWidth: number;
+  contentWidth: number;
 }
 
 @Injectable({
@@ -183,7 +182,7 @@ export class TimelineLayoutService {
       showLegends,
     );
 
-    this.postProcessVisuals(rows, compactMode);
+    this.postProcessVisuals(rows);
 
     return this.calculateLayoutMetrics(rows, legendRows);
   }
@@ -201,22 +200,21 @@ export class TimelineLayoutService {
     const textPadding = this.config.textPadding();
 
     for (const candidate of candidates) {
-      const event = this.createRenderEvent(candidate, textPadding);
+      const event = this.createRenderEvent(candidate);
       let placed = false;
 
       for (let r = 0; r < rows.length; r++) {
-        if (
-          this.canPlaceInRow(
-            event,
-            rows[r],
-            minEventGap,
-            templateWidth,
-            legendCandidates,
-            showLegends,
-            compactMode,
-            textPadding,
-          )
-        ) {
+        const canPlace = this.canPlaceInRow(
+          event,
+          rows[r],
+          minEventGap,
+          templateWidth,
+          legendCandidates,
+          showLegends,
+          compactMode,
+        );
+
+        if (canPlace) {
           event.row = r;
           placed = true;
           break;
@@ -225,19 +223,28 @@ export class TimelineLayoutService {
 
       if (!placed) {
         event.row = rows.length;
-        if (!showLegends) event.displayMode = 'full';
         rows.push([event]);
       }
     }
 
     const viewPaddingRight = this.config.viewPaddingRight();
     for (const row of rows) {
-      if (row.length > 0) {
-        const last = row[row.length - 1];
-        last.safeWidth = Math.max(
-          0,
-          containerWidth - last.x + viewPaddingRight,
-        );
+      for (let i = 0; i < row.length; i++) {
+        const event = row[i];
+        const nextEvent = row[i + 1];
+
+        if (nextEvent) {
+          event.safeWidth = nextEvent.x - event.x - minEventGap;
+        } else {
+          event.safeWidth = Math.max(
+            0,
+            containerWidth - event.x + viewPaddingRight,
+          );
+        }
+
+        if (showLegends && event.contentWidth > event.safeWidth) {
+          this.markAsLegend(event, legendCandidates, templateWidth);
+        }
       }
     }
 
@@ -252,55 +259,50 @@ export class TimelineLayoutService {
     legendCandidates: RenderEvent[],
     showLegends: boolean,
     compactMode: boolean,
-    textPadding: number,
   ): boolean {
     const last = row[row.length - 1];
 
-    if (event.x < last.x + last.layoutWidth + minGap - 1e-6) {
+    const requiredWidth = compactMode ? last.visualWidth : last.layoutWidth;
+    const boxGap = compactMode ? minGap : 0;
+
+    if (event.x < last.x + requiredWidth + boxGap - 1e-6) {
       return false;
     }
 
     const spaceToNextEvent = event.x - last.x;
-    last.safeWidth = spaceToNextEvent - minGap;
-
-    const textNeeded = last.nameWidth + textPadding;
-    const textFits = textNeeded <= spaceToNextEvent;
+    const safeWidth = spaceToNextEvent - minGap;
 
     if (compactMode) {
-      if (!textFits && showLegends) {
-        if (last.legendId === 0) {
-          last.legendId = -1;
-          last.displayText = `${last.legendId} ${last.raw.name}`;
-          legendCandidates.push(last);
-        }
-        last.displayMode =
-          templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
-      }
       row.push(event);
       return true;
     }
 
-    if (textFits) {
+    if (last.contentWidth <= safeWidth) {
       row.push(event);
       return true;
     }
 
     if (showLegends) {
-      const legendFits = templateWidth <= spaceToNextEvent;
-      if (legendFits) {
-        if (last.legendId === 0) {
-          last.legendId = -1;
-          last.displayText = `${last.legendId} ${last.raw.name}`;
-          legendCandidates.push(last);
-        }
-        last.displayMode =
-          templateWidth <= last.visualWidth ? 'legend-full' : 'legend-overflow';
+      const requiredSpace = Math.max(last.visualWidth, templateWidth);
+      if (requiredSpace <= safeWidth) {
+        this.markAsLegend(last, legendCandidates, templateWidth);
         row.push(event);
         return true;
       }
     }
 
     return false;
+  }
+
+  private markAsLegend(
+    event: RenderEvent,
+    legendCandidates: RenderEvent[],
+    templateWidth: number,
+  ) {
+    if (event.legendId === 0) {
+      event.legendId = -1;
+      legendCandidates.push(event);
+    }
   }
 
   computeVerticalPositions(categories: CategoryLayout[]): CategoryLayout[] {
@@ -466,6 +468,9 @@ export class TimelineLayoutService {
         pxPerYear,
       );
 
+      const nameWidth = this.textMeasure.getTextWidth(raw.name, font);
+      const contentWidth = nameWidth + this.config.textPadding() * 2;
+
       candidates.push({
         raw,
         x: geo.x,
@@ -473,30 +478,34 @@ export class TimelineLayoutService {
         visualWidth: geo.visualWidth,
         clippedLeft: geo.clippedLeft,
         clippedRight: geo.clippedRight,
-        nameWidth: this.textMeasure.getTextWidth(raw.name, font),
+        nameWidth: nameWidth,
+        contentWidth: contentWidth,
       });
     }
 
     return candidates;
   }
 
-  private calculateLegendTemplateWidth(count: number): number {
-    const digits = count > 0 ? String(count).length : 1;
-    const templateString = '0'.repeat(digits);
+  private calculateLegendItemWidth(idWidth: number, nameWidth: number): number {
     return (
-      this.textMeasure.getTextWidth(templateString, this.config.font()) +
-      this.config.textPadding()
+      idWidth +
+      this.config.baseFontSize() * 0.25 +
+      nameWidth +
+      this.config.textPadding() * 2
     );
   }
 
-  private createRenderEvent(
-    candidate: LayoutCandidate,
-    textPadding: number,
-  ): RenderEvent {
-    const neededForFull = candidate.nameWidth + textPadding;
-    const initialMode =
-      neededForFull <= candidate.visualWidth ? 'full' : 'overflow';
+  private calculateLegendTemplateWidth(count: number): number {
+    const digits = count > 0 ? String(count).length : 1;
+    const templateString = '0'.repeat(digits);
+    const idWidth = this.textMeasure.getTextWidth(
+      templateString,
+      this.config.font(),
+    );
+    return this.calculateLegendItemWidth(idWidth, 0);
+  }
 
+  private createRenderEvent(candidate: LayoutCandidate): RenderEvent {
     return {
       legendId: 0,
       raw: candidate.raw,
@@ -504,15 +513,13 @@ export class TimelineLayoutService {
       layoutWidth: candidate.layoutWidth,
       visualWidth: candidate.visualWidth,
       row: -1,
-      displayMode: initialMode,
       clippedLeft: candidate.clippedLeft,
       clippedRight: candidate.clippedRight,
       nameWidth: candidate.nameWidth,
       displayText: candidate.raw.name,
       safeWidth: candidate.visualWidth,
-      contentWidth: 0,
-      needsMask: false,
-      hasRightBorder: true,
+      contentWidth: candidate.contentWidth,
+      displayMode: 'full',
     };
   }
 
@@ -530,25 +537,28 @@ export class TimelineLayoutService {
 
     for (let i = 0; i < legendCandidates.length; i++) {
       legendCandidates[i].legendId = i + 1;
-      legendCandidates[i].displayText =
-        `${legendCandidates[i].legendId} ${legendCandidates[i].raw.name}`;
+      const legendIdWidth = this.textMeasure.getTextWidth(
+        legendCandidates[i].legendId.toString(),
+        this.config.font(),
+      );
+      legendCandidates[i].contentWidth = this.calculateLegendItemWidth(
+        legendIdWidth,
+        legendCandidates[i].nameWidth,
+      );
     }
 
     const items: LegendItem[] = [];
     for (const row of rows) {
       for (const ev of row) {
         if (ev.legendId > 0) {
-          const w =
-            this.textMeasure.getTextWidth(ev.displayText, this.config.font()) +
-            this.config.textPadding();
           items.push({
             legendId: ev.legendId,
             raw: ev.raw,
             x: ev.x,
-            layoutWidth: w,
-            visualWidth: w,
+            layoutWidth: ev.contentWidth,
+            visualWidth: ev.contentWidth,
             row: -1,
-            text: ev.displayText,
+            text: `${ev.legendId} ${ev.raw.name}`,
           });
         }
       }
@@ -579,30 +589,22 @@ export class TimelineLayoutService {
     return legendRows;
   }
 
-  private postProcessVisuals(rows: RenderEvent[][], compactMode: boolean) {
-    const paddingLeft = this.config.textPadding();
-
+  private postProcessVisuals(rows: RenderEvent[][]) {
     for (const row of rows) {
       for (const event of row) {
-        let contentWidth = paddingLeft;
-        if (event.legendId > 0) {
-          contentWidth += this.textMeasure.getTextWidth(
-            event.displayText,
-            this.config.font(),
-          );
+        if (event.contentWidth <= event.safeWidth) {
+          if (event.contentWidth <= event.visualWidth) {
+            event.displayMode = 'full';
+          } else {
+            event.displayMode = 'overflow';
+          }
         } else {
-          contentWidth += event.nameWidth;
+          if (event.safeWidth <= event.visualWidth) {
+            event.displayMode = 'full-partial';
+          } else {
+            event.displayMode = 'overflow-partial';
+          }
         }
-        event.contentWidth = contentWidth;
-        event.needsMask = contentWidth > event.safeWidth;
-
-        const textOverflowsBar = contentWidth > event.visualWidth + 1;
-        const hasFreeSpace = event.safeWidth - event.visualWidth > 2;
-        event.hasRightBorder = !(
-          event.clippedRight ||
-          (textOverflowsBar && hasFreeSpace) ||
-          event.raw.isOngoing
-        );
       }
     }
   }
