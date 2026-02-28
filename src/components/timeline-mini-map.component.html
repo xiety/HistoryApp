@@ -19,8 +19,6 @@
       class="input-control">
     </app-number-input>
 
-    <span class="range-separator">-</span>
-
     <app-number-input
       [value]="state.endYear()"
       (valueChange)="updateEnd($event)"
@@ -60,8 +58,6 @@
     class="track-container"
     #mapContainer
     (pointermove)="onPointerMove($event)"
-    (pointerup)="onPointerUp($event)"
-    (pointercancel)="onPointerUp($event)"
     (pointerleave)="onPointerLeave()">
     <div class="map-content-layer" #contentLayer>
       <svg

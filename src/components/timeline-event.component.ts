@@ -145,13 +145,14 @@ export class TimelineEventComponent {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (this.state.isContentManipulation()) return;
+
     const dist = Math.hypot(
       event.clientX - this.pointerDownPos.x,
       event.clientY - this.pointerDownPos.y,
     );
 
     if (dist < 5) {
-      event.stopPropagation();
       this.state.toggleEventSelection(this.raw());
     }
   }
@@ -162,11 +163,13 @@ export class TimelineEventComponent {
   }
 
   onMouseEnter(event: PointerEvent) {
+    if (event.pointerType === 'touch') return;
     this.state.isHoverDetailsSuppressed.set(event.ctrlKey || event.metaKey);
     this.state.setHoveredEvent(this.raw());
   }
 
-  onMouseLeave() {
+  onMouseLeave(event: PointerEvent) {
+    if (event.pointerType === 'touch') return;
     this.state.setHoveredEvent(null);
   }
 }

@@ -125,6 +125,14 @@ export class TimelineLayoutService {
   });
 
   readonly virtualLayoutInfo = computed(() => {
+    if (this.state.isPrinting()) {
+      return {
+        items: this.fullLayout(),
+        topSpacer: 0,
+        bottomSpacer: 0,
+      };
+    }
+
     const allCategories = this.fullLayout();
     const scrollTop = this.state.scrollTop();
     const viewportHeight = this.state.viewportHeight();

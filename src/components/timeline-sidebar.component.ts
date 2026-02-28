@@ -4,6 +4,7 @@ import { TimelineEditorComponent } from './timeline-editor.component';
 import { TimelineTocComponent } from './timeline-toc.component';
 import { TimelineSetupComponent } from './timeline-setup.component';
 import { TimelineStateService } from '../services/timeline-state.service';
+import { IconComponent } from './icon.component';
 import {
   TimelineUiStateService,
   SidebarTab,
@@ -18,7 +19,7 @@ interface TabDefinition {
 @Component({
   selector: 'app-timeline-sidebar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './timeline-sidebar.component.html',
   styleUrls: ['./timeline-sidebar.component.css'],
 })

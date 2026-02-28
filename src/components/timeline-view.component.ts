@@ -18,10 +18,18 @@ export class TimelineViewComponent {
   config = inject(TimelineConfigService);
   layout = inject(TimelineLayoutService);
 
-  clearSelection() {
+  clearSelection(event?: Event) {
     if (this.state.isContentManipulation()) {
       return;
     }
+
+    if (event) {
+      const target = event.target as HTMLElement;
+      if (target?.closest && target.closest('.timeline-event')) {
+        return;
+      }
+    }
+
     this.state.clearEventSelection();
   }
 }

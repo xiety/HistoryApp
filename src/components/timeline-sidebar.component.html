@@ -13,6 +13,12 @@
         {{ tab.label }}
       </button>
     }
+    <button
+      class="close-sidebar-btn"
+      (click)="ui.hideSidebar()"
+      title="Close Sidebar">
+      <app-icon name="x" [size]="16" />
+    </button>
   </div>
 
   <div class="sidebar-content">

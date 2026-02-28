@@ -180,7 +180,9 @@ export class TimelineInteractionsDirective {
     }
 
     if (this.activePointers.size === 0) {
-      if (!this.hasMoved) this.updateHoverYear(event.clientX);
+      if (!this.hasMoved && event.pointerType === 'mouse') {
+        this.updateHoverYear(event.clientX);
+      }
       this.isDragging = false;
       if (this.hasMoved) {
         this.workspace.endDrag();

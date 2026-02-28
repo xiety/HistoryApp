@@ -2,7 +2,7 @@
   class="timeline-layout-area"
   style="width: 100%"
   [style.font-size.px]="config.baseFontSize()"
-  (click)="clearSelection()">
+  (pointerup)="clearSelection($event)">
   <div
     class="fluid-timeline-container"
     [style.margin-right.px]="config.viewPaddingRight()"

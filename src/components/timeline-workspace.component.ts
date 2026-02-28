@@ -7,6 +7,8 @@ import {
   effect,
   afterRenderEffect,
   afterNextRender,
+  HostListener,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -51,6 +53,7 @@ export class TimelineWorkspaceComponent {
   config = inject(TimelineConfigService);
   private scrollSync = inject(ScrollSyncService);
   private geometry = inject(TimelineGeometryService);
+  private cdr = inject(ChangeDetectorRef);
 
   readonly scrollContainer =
     viewChild.required<ElementRef<HTMLDivElement>>('scrollArea');
@@ -75,6 +78,17 @@ export class TimelineWorkspaceComponent {
   readonly persistentGuideX = computed(() =>
     this.getGuidePositionPx(this.state.persistentMarkerYear()),
   );
+
+  @HostListener('window:beforeprint')
+  onBeforePrint() {
+    this.state.isPrinting.set(true);
+    this.cdr.detectChanges();
+  }
+
+  @HostListener('window:afterprint')
+  onAfterPrint() {
+    this.state.isPrinting.set(false);
+  }
 
   constructor() {
     this.state.scrollTo$

@@ -78,6 +78,7 @@
   border-bottom: 1px solid #e2e8f0;
   background-color: #f8fafc;
   flex-shrink: 0;
+  width: 100%;
   min-width: 300px;
 }
 
@@ -110,11 +111,34 @@
   }
 }
 
+.close-sidebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0 12px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
 .sidebar-content {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
+  width: 100%;
   min-width: 300px;
 }

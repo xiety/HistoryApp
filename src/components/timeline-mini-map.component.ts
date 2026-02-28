@@ -51,6 +51,7 @@ export class TimelineMiniMapComponent {
   readonly dragMode = signal<'start' | 'end' | 'pan' | 'create' | null>(null);
   readonly hoverYear = signal<number | null>(null);
 
+  private activePointerId: number | null = null;
   private dragStartX = 0;
   private dragAnchorYear = 0;
   private initialRange = { start: 0, end: 0 };
@@ -153,6 +154,9 @@ export class TimelineMiniMapComponent {
   }
 
   onPointerDown(event: PointerEvent, mode: 'start' | 'end' | 'pan' | 'create') {
+    if (this.activePointerId !== null) return;
+    this.activePointerId = event.pointerId;
+
     event.preventDefault();
     event.stopPropagation();
 
@@ -179,6 +183,12 @@ export class TimelineMiniMapComponent {
   }
 
   onPointerMove(event: PointerEvent) {
+    if (
+      this.activePointerId !== null &&
+      event.pointerId !== this.activePointerId
+    )
+      return;
+
     this.hoverYear.set(this.getYearFromEvent(event));
 
     if (!this.isDragging()) return;
@@ -199,6 +209,12 @@ export class TimelineMiniMapComponent {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (
+      this.activePointerId !== null &&
+      event.pointerId !== this.activePointerId
+    )
+      return;
+
     if (this.isDragging()) {
       if (this.dragMode() === 'create' && this.isPotentialClick) {
         this.handleBackgroundClick(event);
@@ -209,12 +225,9 @@ export class TimelineMiniMapComponent {
       this.state.isContentManipulation.set(false);
       this.dragMode.set(null);
       this.isPotentialClick = false;
-
-      const target = event.target as HTMLElement;
-      if (target.hasPointerCapture(event.pointerId)) {
-        target.releasePointerCapture(event.pointerId);
-      }
     }
+
+    this.activePointerId = null;
   }
 
   onPointerLeave() {

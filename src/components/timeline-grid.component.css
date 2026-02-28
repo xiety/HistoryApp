@@ -29,3 +29,11 @@
   background-color: #94a3b8;
   z-index: 10;
 }
+
+.grid-line-boundary.start {
+  left: 0;
+}
+
+.grid-line-boundary.end {
+  right: 0;
+}

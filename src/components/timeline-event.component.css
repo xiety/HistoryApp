@@ -53,16 +53,16 @@
   &.instance-active {
     z-index: 110;
   }
-}
 
-.timeline-event.pulse-trigger-a {
-  z-index: 120;
-  animation: shadow-pulse-a 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
-}
+  &.pulse-trigger-a {
+    z-index: 120;
+    animation: shadow-pulse-a 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+  }
 
-.timeline-event.pulse-trigger-b {
-  z-index: 120;
-  animation: shadow-pulse-b 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+  &.pulse-trigger-b {
+    z-index: 120;
+    animation: shadow-pulse-b 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+  }
 }
 
 @keyframes shadow-pulse-a {
@@ -171,6 +171,7 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     border-radius: 2px;
     padding-right: 5px;
+    min-width: 100%;
   }
 }
 
@@ -265,17 +266,17 @@
   &.ongoing {
     background-color: #b45309;
   }
-}
 
-.start-tag {
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 0.4em;
-}
+  &.start-tag {
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 0.4em;
+  }
 
-.end-tag {
-  top: 100%;
-  left: 100%;
-  margin-top: 0.4em;
-  margin-left: 0.2em;
+  &.end-tag {
+    top: 100%;
+    left: 100%;
+    margin-top: 0.4em;
+    margin-left: 0.2em;
+  }
 }

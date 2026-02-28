@@ -14,7 +14,7 @@
   (pointerup)="onPointerUp($event)"
   (click)="onClick($event)"
   (pointerenter)="onMouseEnter($event)"
-  (pointerleave)="onMouseLeave()"
+  (pointerleave)="onMouseLeave($event)"
   (animationend)="animation.onAnimationEnd()">
   <div class="interaction-layer">
     @if (type() === "event") {
@@ -60,6 +60,38 @@
           }
         </div>
       }
+
+      @if (isActive()) {
+        @if (hasRelatedDots()) {
+          <div class="category-tag-container">
+            @for (cat of relatedCategories(); track cat.name) {
+              <div
+                class="category-mini-tag"
+                [style.background-color]="'hsl(' + cat.color + ')'">
+                {{ cat.name }}
+              </div>
+            }
+          </div>
+        }
+
+        <div
+          class="date-tag start-tag"
+          [class.out-of-bounds]="isStartOutOfBounds()">
+          {{ raw().start | yearFormat }}
+        </div>
+
+        @if (!isSingleYear()) {
+          @if (isOngoing()) {
+            <div class="date-tag end-tag ongoing">Present</div>
+          } @else {
+            <div
+              class="date-tag end-tag"
+              [class.out-of-bounds]="isEndOutOfBounds()">
+              {{ raw().end | yearFormat }}
+            </div>
+          }
+        }
+      }
     }
 
     @if (type() === "legend") {
@@ -67,38 +99,6 @@
         <span class="legend-id">{{ item().legendId }}</span>
         <span class="legend-name">{{ item().raw.name }}</span>
       </span>
-    }
-
-    @if (isActive()) {
-      @if (hasRelatedDots()) {
-        <div class="category-tag-container">
-          @for (cat of relatedCategories(); track cat.name) {
-            <div
-              class="category-mini-tag"
-              [style.background-color]="'hsl(' + cat.color + ')'">
-              {{ cat.name }}
-            </div>
-          }
-        </div>
-      }
-
-      <div
-        class="date-tag start-tag"
-        [class.out-of-bounds]="isStartOutOfBounds()">
-        {{ raw().start | yearFormat }}
-      </div>
-
-      @if (!isSingleYear()) {
-        @if (isOngoing()) {
-          <div class="date-tag end-tag ongoing">Present</div>
-        } @else {
-          <div
-            class="date-tag end-tag"
-            [class.out-of-bounds]="isEndOutOfBounds()">
-            {{ raw().end | yearFormat }}
-          </div>
-        }
-      }
     }
   </div>
 </div>

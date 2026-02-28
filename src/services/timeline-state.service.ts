@@ -85,6 +85,7 @@ export class TimelineStateService {
 
   readonly isUserInteracting = signal<boolean>(false);
   readonly isContentManipulation = signal<boolean>(false);
+  readonly isPrinting = signal<boolean>(false);
 
   readonly isMinimapInteracting = signal<boolean>(false);
   readonly tocFilterQuery = signal<string>('');

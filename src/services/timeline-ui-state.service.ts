@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { TimelineStateService } from './timeline-state.service';
 
 export type SidebarTab = 'editor' | 'toc' | 'setup';
 export type SidebarMode = 'auto' | 'visible' | 'hidden';
@@ -7,15 +8,21 @@ export type SidebarMode = 'auto' | 'visible' | 'hidden';
   providedIn: 'root',
 })
 export class TimelineUiStateService {
+  private state = inject(TimelineStateService);
+
   readonly sidebarMode = signal<SidebarMode>('auto');
   readonly activeSidebarTab = signal<SidebarTab>('editor');
   readonly isErrorPanelExpanded = signal<boolean>(true);
 
   showSidebar() {
+    const currentWidth = this.state.containerWidth();
+    this.state.setContainerWidth(Math.max(10, currentWidth - 300));
     this.sidebarMode.set('visible');
   }
 
   hideSidebar() {
+    const currentWidth = this.state.containerWidth();
+    this.state.setContainerWidth(currentWidth + 300);
     this.sidebarMode.set('hidden');
   }
 
