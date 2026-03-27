@@ -456,17 +456,10 @@ export class TimelineLayoutService {
     const candidates: LayoutCandidate[] = [];
 
     for (const raw of events) {
-      let visualStart = raw.start;
-      let visualEnd = raw.end;
+      const { start: visualStart, end: visualEnd } =
+        this.geometry.getVisualRange(raw);
 
-      if (raw.start === raw.end) {
-        visualEnd = raw.start + 1;
-      } else {
-        visualStart += 0.5;
-        visualEnd += 0.5;
-      }
-
-      if (visualEnd < viewStart || visualStart >= viewEnd) continue;
+      if (visualEnd <= viewStart || visualStart >= viewEnd) continue;
 
       const geo = this.geometry.calculateEventGeometry(
         visualStart,

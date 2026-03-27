@@ -255,7 +255,11 @@ export class TimelineStateService {
           const isMatch = !isSearch || (matches && matches.has(evt.id));
           if (!isMatch) continue;
           cFiltered++;
-          if (evt.end >= sYear && evt.start <= eYear) {
+
+          const { start: vStart, end: vEnd } =
+            this.geometry.getVisualRange(evt);
+
+          if (vEnd > sYear && vStart < eYear) {
             cPotential++;
             if (!isCatHidden) cVisible++;
           }

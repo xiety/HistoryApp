@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { TimelineConfigService } from './timeline-config.service';
+import { RawEvent } from './timeline-parser.service';
 
 export interface GridLine {
   x: number;
@@ -25,6 +26,18 @@ export class TimelineGeometryService {
     const span = max - min;
     if (span <= 0) return 0;
     return (value - min) / span;
+  }
+
+  getVisualRange(raw: RawEvent): { start: number; end: number } {
+    let start = raw.start;
+    let end = raw.end;
+    if (raw.start === raw.end) {
+      end = raw.start + 1;
+    } else {
+      start += 0.5;
+      end += 0.5;
+    }
+    return { start, end };
   }
 
   getValueFromRatio(ratio: number, min: number, max: number): number {
